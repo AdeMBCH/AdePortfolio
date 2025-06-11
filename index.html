@@ -73,7 +73,7 @@ body {
 a,
 .btn {
 	text-decoration: none;
-	color: #d17c78;
+	color: #34fc47;
 	outline: none;
 }
 
@@ -529,6 +529,59 @@ canvas{
 }
 
 
+    /* ====== Popup Portfolio ====== */
+    #portfolio-popup.hidden {
+      display: none;
+    }
+
+    .portfolio-popup {
+      position: fixed;
+      top: 20%;
+      left: 30%;
+      width: 400px;
+      background-color: #111;
+      border: 2px solid #34fc47;
+      color: #34fc47;
+      z-index: 2000;
+      padding: 1em;
+      border-radius: 5px;
+      font-family: 'VT323', monospace;
+      box-shadow: 0 0 10px #34fc47;
+    }
+
+    .popup-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.2em;
+      margin-bottom: 0.5em;
+      cursor: move;
+    }
+
+    .popup-close {
+      background: none;
+      border: none;
+      color: #34fc47;
+      font-size: 1.2em;
+      cursor: pointer;
+    }
+
+    .popup-content ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .popup-content li {
+      margin: 0.5em 0;
+    }
+
+    .popup-content a {
+      color: #34fc47;
+      text-decoration: underline;
+    }
+
+
 
 </style>   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inconsolata:400,700|VT323" /> <script>document.documentElement.className = 'js';</script> 
 <div class="connecting-dots" id="connecting-dots">
@@ -552,7 +605,7 @@ canvas{
 		</p>
 		
 		<p class="terminal__line">
-			Minor in Security & Defense
+			Dual Degree student at ENSTA
 		</p>
 		<p class="terminal__line">
 		
@@ -563,10 +616,11 @@ canvas{
 		</p>
 		 
 		<p class="terminal__line">
-			<a href="./portfolio/index.html">Portfolio</a>
+			<a href="#" id="portfolio-link">Projects</a>
 		</p>
+		
 		<p class="terminal__line">
-			<a href="./portfolio/assets/pdf/CV Adéas BIECHE international.pdf">Myresume</a>
+			<a href="./portfolio/assets/pdf/CV ADEBCH.pdf">Resume</a>
 		</p>
 		 
 		<p class="terminal__line">
@@ -574,7 +628,8 @@ canvas{
 		</p>
 		
 		<p class="terminal__line">
-			<a href="./art/index.html" class="h12">Art</a>
+			<a href="./art/index.html" class="h12">Internship</a>
+			<a href="#"></a>
 		</p>
 		
 		<p class="terminal__line">
@@ -595,6 +650,30 @@ canvas{
 		 <input spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off" placeholder="Command Line" name="search" id="search__input" class="search__input" /> 
 	</form>
 	 
+</div>
+
+<!-- === POPUP PORTFOLIO === -->
+<div id="portfolio-popup" class="portfolio-popup hidden">
+  <div class="popup-header">
+    <span>My Projects</span>
+    <button class="popup-close">X</button>
+  </div>
+  <div class="popup-content">
+    <ul>
+      <li><a href="./portfolio/assets/pdf/project1.pdf" target="_blank">Suivi furtif de cible autonome avec un robot sous-marin type BlueRov2</a></li>
+      <li><a href="./portfolio/assets/pdf/project2.pdf" target="_blank">Camera Alignment Tool for the Security of Toulon harbor</a></li>
+      <!--<li><a href="./portfolio/assets/pdf/project1.pdf" target="_blank">Autonomous Robot Project</a></li>
+      <li><a href="./portfolio/assets/pdf/project2.pdf" target="_blank">TurtleBot</a></li>
+	  <li><a href="./portfolio/assets/pdf/project2.pdf" target="_blank">Vehicules Dynamic Simulator (Download)</a></li>
+	  <li><a href="./portfolio/assets/pdf/project2.pdf" target="_blank">Dassault UAV Challenge : Tilt Rotor VTOL</a></li>
+	  <li><a href="./portfolio/assets/pdf/project2.pdf" target="_blank">Robot Club of Toulon : GoalKeeper & Stereovision</a></li>
+	  <li><a href="./portfolio/assets/pdf/project2.pdf" target="_blank">Robot Club of Toulon : 2D SLAM using ICP</a></li>
+	  <li><a href="./portfolio/assets/pdf/project2.pdf" target="_blank">Programmation Pack : Brick Breaker, Deepline Project</a></li>
+	  <li><a href="./portfolio/assets/pdf/project2.pdf" target="_blank">SharkShield Study</a></li>
+      <li><a href="./portfolio/assets/pdf/project3.pdf" target="_blank">Savonius Wind Turbine</a></li>
+	  <li><a href="./portfolio/assets/pdf/project2.pdf" target="_blank">SharkShield Study</a></li>-->
+    </ul>
+  </div>
 </div>
 <!--  /search  --> <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script> <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.19.1/easing/EasePack.min.js"></script> <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.19.1/TweenLite.min.js"></script>                  <script>
 
@@ -669,18 +748,19 @@ console.log(search_form);
 
 
 $(search_form).submit(function( event ) {
-  if ( $( "input" ).val() === "Portfolio" || $( "input" ).val() === "portfolio"  ) {
-    window.open('./portfolio/index.html');
-  } else if ( $( "input" ).val() === "art" || $( "input" ).val() === "Art") {
+  //if ( $( "input" ).val() === "Projects" || $( "input" ).val() === "projects"  ) {
+    //window.open('./portfolio/index.html');
+  //} else 
+	if ( $( "input" ).val() === "art" || $( "input" ).val() === "Art") {
     window.open('./art/index.html');
-  } else if ($( "input" ).val() === "myresume" || $( "input" ).val() === "Myresume") {
-    window.open('./portfolio/assets/pdf/CV Adéas BIECHE international.pdf');
+  } else if ($( "input" ).val() === "resume" || $( "input" ).val() === "Resume") {
+    window.open('./portfolio/assets/pdf/CV ADEBCH.pdf');
   } else if ($( "input" ).val() === "contact" || $( "input" ).val() === "Contact") {
 		var terminal_div = document.getElementsByClassName('terminal');
 				$('.terminal').addClass("binding");
 
 		var commands = document.createElement('a');
-					commands.innerHTML = ('E-mail : adeasbieche@gmail.com <br> Phone Number : 0692001999(+262)');
+					commands.innerHTML = ('E-mail : adeasbieche@gmail.com <br>');
 					commands.setAttribute('class', 'terminal__line');
 					$(commands).appendTo(terminal_div);
   } else if ($( "input" ).val() === "linkedin" || $( "input" ).val() === "Linkedin") {
@@ -711,3 +791,52 @@ $(search_form).submit(function( event ) {
 
 
     </script>
+	
+	<!-- === JS FUNCTIONALITÉ POPUP === -->
+<script>
+$(function () {
+  // Ouvrir la popup au clic sur le lien
+  $('#portfolio-link').on('click', function (e) {
+    e.preventDefault();
+    $('#portfolio-popup').removeClass('hidden');
+  });
+
+  // Fermer la popup
+  $('.popup-close').on('click', function () {
+    $('#portfolio-popup').addClass('hidden');
+  });
+
+  // Saisie terminale
+  $('.search__form').on('submit', function (e) {
+    const command = $('#search__input').val().trim().toLowerCase();
+    if (command === 'projects') {
+      $('#portfolio-popup').removeClass('hidden');
+    }
+    e.preventDefault();
+  });
+
+  // Rendre la popup déplaçable
+  let isDragging = false, offsetX, offsetY;
+  const popup = document.getElementById('portfolio-popup');
+  const header = popup.querySelector('.popup-header');
+
+  header.addEventListener('mousedown', function (e) {
+    isDragging = true;
+    offsetX = e.clientX - popup.offsetLeft;
+    offsetY = e.clientY - popup.offsetTop;
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', function (e) {
+    if (isDragging) {
+      popup.style.left = (e.clientX - offsetX) + 'px';
+      popup.style.top = (e.clientY - offsetY) + 'px';
+    }
+  });
+
+  document.addEventListener('mouseup', function () {
+    isDragging = false;
+    document.body.style.userSelect = 'auto';
+  });
+});
+</script>
