@@ -1,0 +1,1070 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Portfolio BIECHE Matys Adéas</title>
+  <style>
+    html, body { margin:0; height:100%; background:#000; overflow:hidden; }
+    canvas { display:block; width:100vw; height:100vh; }
+    .hud{
+      position:fixed; left:12px; top:10px; color:#3dff74; font:12px/1.4 monospace;
+      user-select:none; opacity:.9;
+    }
+
+    .hidden { display: none; }
+
+    .portfolio-popup {
+      position: fixed;
+      top: 20%;
+      left: 30%;
+      width: 520px;
+      max-width: calc(100vw - 40px);
+      background-color: #111;
+      border: 2px solid #34fc47;
+      color: #34fc47;
+      z-index: 2000;
+      padding: 1em;
+      border-radius: 6px;
+      box-shadow: 0 0 12px #34fc47;
+      font-family: monospace;
+    }
+
+    .popup-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: move;
+      margin-bottom: 0.8em;
+    }
+
+    .popup-close {
+      background: none;
+      border: none;
+      color: #34fc47;
+      font-size: 1.1em;
+      cursor: pointer;
+    }
+
+    .popup-content ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .popup-content li {
+      margin: 0.6em 0;
+    }
+
+    .popup-content a {
+      color: #34fc47;
+      text-decoration: underline;
+    }
+
+    .touch-ui{
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      z-index: 3000;
+      display: none; /* activé sur mobile via media query */
+      gap: 10px;
+      align-items: flex-end;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    .touch-pad{
+      position: relative;
+      width: 140px;
+      height: 140px;
+    }
+
+    .tbtn{
+      font-family: monospace;
+      color: #34fc47;
+      background: rgba(0,0,0,0.55);
+      border: 2px solid #34fc47;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(52,252,71,0.25);
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .tbtn:active{
+      background: rgba(52,252,71,0.12);
+    }
+
+    .touch-pad .tbtn{
+      position: absolute;
+      width: 52px;
+      height: 52px;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .touch-pad .up{ left: 44px; top: 0; }
+    .touch-pad .down{ left: 44px; bottom: 0; }
+    .touch-pad .left{ left: 0; top: 44px; }
+    .touch-pad .right{ right: 0; top: 44px; }
+
+    .tbtn.fire{
+      width: 92px;
+      height: 92px;
+      border-radius: 16px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    /* mobile / tactile */
+    @media (hover: none), (pointer: coarse) {
+      .touch-ui{ display: flex; }
+    }
+
+
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud">
+  Controls: ← → Turn | ↑ thrust | ↓ brake<br>
+  R: reset
+</div>
+
+<div id="portfolio-popup" class="portfolio-popup hidden">
+  <div class="popup-header" id="popup-header">
+    <span>Projects</span>
+    <button class="popup-close" id="popup-close">X</button>
+  </div>
+  <div class="popup-content">
+    <ul>
+      <li><a href="./portfolio/assets/pdf/CR_Stage_2A_SEatech (5).pdf" target="_blank">Tokyo University of Science : Low-Cost Underwater Communication Device for Fish-type Robot</a></li>
+      <li><a href="./portfolio/assets/pdf/project1.pdf" target="_blank">Suivi furtif de cible autonome avec un robot sous-marin type BlueRov2</a></li>
+      <li><a href="./portfolio/assets/pdf/project2.pdf" target="_blank">Camera Alignment Tool for the Security of Toulon harbor</a></li>
+      <li><a href="./portfolio/assets/pdf/project3.pdf" target="_blank">Dassault UAV Challenge : Tilt Rotor VTOL UAV for sea rescue operations</a></li>
+    </ul>
+  </div>
+</div>
+
+<div class="touch-ui" id="touch-ui">
+  <div class="touch-pad">
+    <button class="tbtn up"    data-action="up">▲</button>
+    <button class="tbtn left"  data-action="left">◀</button>
+    <button class="tbtn right" data-action="right">▶</button>
+    <button class="tbtn down"  data-action="down">▼</button>
+  </div>
+  <button class="tbtn fire" data-action="fire">FIRE</button>
+</div>
+
+
+<script>
+(() => {
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d", { alpha: false });
+
+  function resize() {
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    canvas.width = Math.floor(innerWidth * dpr);
+    canvas.height = Math.floor(innerHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  addEventListener("resize", resize);
+  resize();
+
+  // -----------------------------
+  // Portfolio targets (positions fixes en monde)
+  // -----------------------------
+  const planets = [
+    { id: "cv",       name: "Resume",       url: "portfolio/assets/pdf/Matys_Resume.pdf",              wx:    -1000, wz: 2600, wy:   0,  r: 260 },
+    { id: "linkedin", name: "LinkedIn", url: "https://www.linkedin.com/in/ad%C3%A9as-bieche/",     wx:  2500, wz: 3600, wy: 120,  r: 240 },
+    { id: "devmode",   name: "DevMode",   url: "devmode.html",              wx: -4000,wz: 4200, wy: -80,  r: 260 },
+    { id: "projects", name: "Projects", url: "#projects", wx: 100, wz: 1000, wy: 0, r: 260 },
+  ];
+
+
+  // -----------------------------
+  // ASCII sprites (frames)
+  // -----------------------------
+  const asciiSprites = {
+    // CV: parchemin plus "sophistiqué" (bord roulé + contenu)
+    cv: [
+` ########             ###            ###
+    ############           ###            ###
+   ###        ###           ###          ### 
+   ###                       ###        ###  
+   ###                       ###        ###  
+   ###                        ###      ###   
+   ###                        ###      ###   
+   ###                         ###    ###    
+   ###                         ###    ###    
+   ###                          ###  ###     
+    ############                 ######      
+      ########                    ####`,
+`     ########             ###            ###
+    ############           ###            ###
+   ###        ###           ###          ### 
+   ###                       ###        ###  
+   ###                       ###        ###  
+   ###                        ###      ###   
+   ###                        ###      ###   
+   ###                         ###    ###    
+   ###                         ###    ###    
+   ###                          ###  ###     
+    ############                 ######      
+      ########                    ####`,
+`  ########             ###            ###
+    ############           ###            ###
+   ###        ###           ###          ### 
+   ###                       ###        ###  
+   ###                       ###        ###  
+   ###                        ###      ###   
+   ###                        ###      ###   
+   ###                         ###    ###    
+   ###                         ###    ###    
+   ###                          ###  ###     
+    ############                 ######      
+      ########                    ####`,
+`  ########             ###            ###
+    ############           ###            ###
+   ###        ###           ###          ### 
+   ###                       ###        ###  
+   ###                       ###        ###  
+   ###                        ###      ###   
+   ###                        ###      ###   
+   ###                         ###    ###    
+   ###                         ###    ###    
+   ###                          ###  ###     
+    ############                 ######      
+      ########                    ####`
+    ],
+
+    // LinkedIn: tu as demandé d'utiliser exactement ce dessin
+    linkedin: [
+`                               
+    #######                    
+    #######                    
+      ###                      
+      ###        ##########    
+      ###        ##########    
+      ###        ###      ###  
+      ###        ###      ###  
+      ###        ###      ###  
+      ###        ###      ###  
+      ###        ###      ###  
+      ###        ###      ###  
+    #########    ###      ###  
+    #########    ###      ###  
+                               
+                               `,
+`                              
+     #######                   
+     #######                   
+       ###                     
+       ###       ##########    
+       ###       ##########    
+       ###       ###      ###  
+       ###       ###      ###  
+       ###       ###      ###  
+       ###       ###      ###  
+       ###       ###      ###  
+       ###       ###      ###  
+     #########   ###      ###  
+     #########   ###      ###  
+                              
+                              `,
+`                              
+      #######                  
+      #######                  
+        ###                    
+        ###      ##########    
+        ###      ##########    
+        ###      ###      ###  
+        ###      ###      ###  
+        ###      ###      ###  
+        ###      ###      ###  
+        ###      ###      ###  
+        ###      ###      ###  
+      #########  ###      ###  
+      #########  ###      ###  
+                              
+                              `,
+`                              
+     #######                   
+     #######                   
+       ###                     
+       ###       ##########    
+       ###       ##########    
+       ###       ###      ###  
+       ###       ###      ###  
+       ###       ###      ###  
+       ###       ###      ###  
+       ###       ###      ###  
+       ###       ###      ###  
+     #########   ###      ###  
+     #########   ###      ###  
+                              
+                              `
+    ],
+
+    // GitHub/terminal: tu as demandé d'utiliser exactement ce dessin
+    devmode: [
+`                                
+   ####                         
+    #####                       
+      ######                    
+        ######                  
+      ######                    
+    #####                       
+   ####                         
+                                
+                ############### 
+                ############### 
+                                `,
+`                                
+    ####                        
+     #####                      
+       ######                   
+         ######                 
+       ######                   
+     #####                      
+    ####                        
+                                
+                 ############## 
+                 ############## 
+                                `,
+`                                
+     ####                       
+      #####                     
+        ######                  
+          ######                
+        ######                  
+      #####                     
+     ####                       
+                                
+                  ############# 
+                  ############# 
+                                `,
+`                                
+    ####                        
+     #####                      
+       ######                   
+         ######                 
+       ######                   
+     #####                      
+    ####                        
+                                
+                 ############## 
+                 ############## 
+                                `
+    ],
+
+    projects: [
+`   [ PROJECTS ]
+     ( OPEN )
+`,
+`   < PROJECTS >
+     ( OPEN )
+`,
+`   { PROJECTS }
+     ( OPEN )
+`,
+`   ( PROJECTS )
+     ( OPEN )
+`
+],
+
+  };
+
+  // -----------------------------
+  // Input
+  // -----------------------------
+  const keys = new Set();
+  // -----------------------------
+// Touch controls (mobile)
+// -----------------------------
+  const touchState = { left:false, right:false, up:false, down:false };
+
+  // helper: set an action true/false
+  function setTouch(action, v){
+    if (action === "left") touchState.left = v;
+    if (action === "right") touchState.right = v;
+    if (action === "up") touchState.up = v;
+    if (action === "down") touchState.down = v;
+  }
+
+  // attach events to buttons
+  (function initTouchUI(){
+    const root = document.getElementById("touch-ui");
+    if (!root) return;
+
+    const btns = root.querySelectorAll("[data-action]");
+    btns.forEach(btn => {
+      const action = btn.getAttribute("data-action");
+
+      const start = (e) => {
+        e.preventDefault();
+        if (action === "fire") {
+          fire(); // tir direct sur appui
+        } else {
+          setTouch(action, true);
+        }
+      };
+
+      const end = (e) => {
+        e.preventDefault();
+        if (action !== "fire") setTouch(action, false);
+      };
+
+      btn.addEventListener("pointerdown", start, { passive:false });
+      btn.addEventListener("pointerup", end, { passive:false });
+      btn.addEventListener("pointercancel", end, { passive:false });
+      btn.addEventListener("pointerleave", end, { passive:false });
+    });
+
+    // safety: release all on touch end outside
+    addEventListener("pointerup", () => {
+      touchState.left = touchState.right = touchState.up = touchState.down = false;
+    });
+  })();
+
+  addEventListener("keydown", (e) => {
+    if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
+    if (e.key === " " && !e.repeat) fire();
+    keys.add(e.key);
+    if (e.key.toLowerCase() === "r") reset();
+  }, { passive: false });
+  addEventListener("keyup", (e) => keys.delete(e.key));
+
+  // -----------------------------
+  // Ship
+  // -----------------------------
+  const ship = {
+    x: 0, y: 0,
+    vx: 0, vy: 0,
+    a: 0,
+    turnRate: 2.6,
+    thrust: 110,
+    brake: 120,
+    maxSpeed: 200,
+    roll: 0,
+    pitch: 0,
+    turnInput: 0
+  };
+
+  // -----------------------------
+  // Stars (world)
+  // -----------------------------
+  const stars = [];
+  const STAR_COUNT = 1200;
+  const STAR_XR = 1.35;
+  const STAR_YR = 0.85;
+  const STAR_Z_NEAR = 250;
+  const STAR_Z_FAR  = 9000;
+
+  function rand(min, max){ return min + Math.random()*(max-min); }
+
+  function spawnStarInFront(st) {
+    const fx = Math.sin(ship.a), fz = Math.cos(ship.a);
+    const rx = fz, rz = -fx;
+
+    const z = rand(STAR_Z_NEAR, STAR_Z_FAR);
+    const x = rand(-STAR_XR, STAR_XR) * z;
+    const y = rand(-STAR_YR, STAR_YR) * z;
+
+    st.wx = ship.x + rx * x + fx * z;
+    st.wz = ship.y + rz * x + fz * z;
+    st.wy = y;
+
+    st.px = NaN;
+    st.py = NaN;
+  }
+
+  function initStars() {
+    stars.length = 0;
+    for (let i = 0; i < STAR_COUNT; i++) {
+      const st = { wx: 0, wy: 0, wz: 0, px: NaN, py: NaN };
+      spawnStarInFront(st);
+      st.wx += rand(-500, 500);
+      st.wz += rand(-800, 800);
+      st.wy += rand(-200, 200);
+      stars.push(st);
+    }
+  }
+
+  // -----------------------------
+  // Ship wireframe
+  // -----------------------------
+  const model = {
+    v: [
+      [ 0,  0,  16],
+      [-8,  0,  -6],
+      [ 8,  0,  -6],
+      [-18, 0,  -2],
+      [ 18, 0,  -2],
+      [-6,  0, -16],
+      [ 6,  0, -16],
+      [ 0,  4,  -8],
+    ],
+    e: [
+      [0,1],[0,2],
+      [1,3],[2,4],
+      [1,5],[2,6],
+      [5,6],
+      [0,7],[7,5],[7,6]
+    ]
+  };
+
+  // -----------------------------
+  // Math + camera
+  // -----------------------------
+  function rotX([x,y,z], r){
+    const c = Math.cos(r), s = Math.sin(r);
+    return [x, y*c - z*s, y*s + z*c];
+  }
+  function rotY([x,y,z], r){
+    const c = Math.cos(r), s = Math.sin(r);
+    return [x*c + z*s, y, -x*s + z*c];
+  }
+  function rotZ([x,y,z], r){
+    const c = Math.cos(r), s = Math.sin(r);
+    return [x*c - y*s, x*s + y*c, z];
+  }
+  function project([x,y,z], f, cx, cy){
+    const zz = Math.max(0.01, z);
+    return [cx + (x/zz)*f, cy - (y/zz)*f];
+  }
+
+  function worldToCamera(wx, wy, wz) {
+    const dx = wx - ship.x;
+    const dz = wz - ship.y;
+
+    const fx = Math.sin(ship.a);
+    const fz = Math.cos(ship.a);
+    const rx = fz;
+    const rz = -fx;
+
+    return {
+      x: dx * rx + dz * rz,
+      y: wy,
+      z: dx * fx + dz * fz
+    };
+  }
+
+  // -----------------------------
+  // Targeting / shooting
+  // -----------------------------
+  function acquireTarget() {
+    let best = null;
+    let bestZ = Infinity;
+
+    for (const p of planets) {
+      const c = worldToCamera(p.wx, p.wy || 0, p.wz);
+      if (c.z <= 80) continue;
+
+      const d2 = c.x*c.x + c.y*c.y;
+      if (d2 <= p.r*p.r && c.z < bestZ) {
+        best = p;
+        bestZ = c.z;
+      }
+    }
+    return best;
+  }
+
+  function openLink(url) {
+    if (url === "#projects") {
+      openProjectsPopup();
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+
+  let shotT = 0;
+  let shotName = "";
+  let shotLen = 0;
+  const LASER_SPEED = 22000;
+  const SHOT_DURATION = 0.10;
+
+  function fire() {
+    shotT = SHOT_DURATION;
+    shotLen = 0;
+
+    const hit = acquireTarget();
+    if (hit) {
+      shotName = hit.name;
+      openLink(hit.url);
+    } else {
+      shotName = "";
+    }
+  }
+
+  function openProjectsPopup() {
+  const popup = document.getElementById("portfolio-popup");
+  if (popup) popup.classList.remove("hidden");
+}
+
+  function closeProjectsPopup() {
+    const popup = document.getElementById("portfolio-popup");
+    if (popup) popup.classList.add("hidden");
+  }
+
+  // init popup events (close + draggable)
+  (function initProjectsPopupUI(){
+    const popup = document.getElementById("portfolio-popup");
+    const closeBtn = document.getElementById("popup-close");
+    const header = document.getElementById("popup-header");
+    if (!popup || !closeBtn || !header) return;
+
+    closeBtn.addEventListener("click", closeProjectsPopup);
+
+    let dragging = false, offX = 0, offY = 0;
+
+    header.addEventListener("mousedown", (e) => {
+      dragging = true;
+      offX = e.clientX - popup.offsetLeft;
+      offY = e.clientY - popup.offsetTop;
+      document.body.style.userSelect = "none";
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (!dragging) return;
+      popup.style.left = (e.clientX - offX) + "px";
+      popup.style.top  = (e.clientY - offY) + "px";
+    });
+
+    document.addEventListener("mouseup", () => {
+      dragging = false;
+      document.body.style.userSelect = "auto";
+    });
+  })();
+
+
+  // -----------------------------
+  // ASCII sprite helpers
+  // -----------------------------
+  let animClock = 0;
+
+  function getAsciiFrame(planetId, phase = 0) {
+    const frames = asciiSprites[planetId] || ["?"];
+    const fps = 3; // plus lent = plus lisible
+    const idx = Math.floor(animClock * fps + phase) % frames.length;
+    return frames[(idx + frames.length) % frames.length];
+  }
+
+  function drawAsciiSpriteCentered(x, y, spriteText, fontSizePx, color, highlight) {
+    const lines = String(spriteText).split("\n");
+    const fontSize = Math.max(8, Math.min(26, Math.floor(fontSizePx)));
+    const lineH = Math.floor(fontSize * 1.05);
+
+    ctx.save();
+    ctx.font = `700 ${fontSize}px monospace`;
+    ctx.textBaseline = "top";
+
+    // Calcul largeur max (centrage)
+    let maxW = 0;
+    for (const line of lines) {
+      maxW = Math.max(maxW, ctx.measureText(line).width);
+    }
+    const totalH = lines.length * lineH;
+
+    // Ombre légère (lisible mais on voit au travers)
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    for (let i = 0; i < lines.length; i++) {
+      const lx = x - maxW / 2;
+      const ly = y - totalH / 2 + i * lineH;
+      ctx.fillText(lines[i], lx + 1, ly + 1);
+    }
+
+    // Texte principal (vert terminal)
+    ctx.globalAlpha = highlight ? 1.0 : 0.90;
+    ctx.fillStyle = color;
+    for (let i = 0; i < lines.length; i++) {
+      const lx = x - maxW / 2;
+      const ly = y - totalH / 2 + i * lineH;
+      ctx.fillText(lines[i], lx, ly);
+    }
+
+    ctx.restore();
+  }
+
+
+  // -----------------------------
+  // Reset
+  // -----------------------------
+  function reset() {
+    ship.x = ship.y = 0;
+    ship.vx = ship.vy = 0;
+    ship.a = 0;
+    ship.roll = 0;
+    ship.pitch = 0;
+    ship.turnInput = 0;
+
+    shotT = 0;
+    shotLen = 0;
+    shotName = "";
+    animClock = 0;
+
+    initStars();
+  }
+  reset();
+
+  // -----------------------------
+  // Loop
+  // -----------------------------
+  let last = performance.now();
+
+  function tick(now){
+    const dt = Math.min(0.033, (now - last) / 1000);
+    last = now;
+    update(dt);
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function update(dt){
+    let turn = 0;
+    if (keys.has("ArrowLeft") || touchState.left)  turn -= 1;
+    if (keys.has("ArrowRight") || touchState.right) turn += 1;
+
+    ship.turnInput = turn;
+
+    ship.a += turn * ship.turnRate * dt;
+
+    const hx = Math.sin(ship.a);
+    const hz = Math.cos(ship.a);
+
+    let ax = 0, az = 0;
+    let thrusting = false;
+
+    if (keys.has("ArrowUp") || touchState.up) {
+      ax += hx * ship.thrust;
+      az += hz * ship.thrust;
+      thrusting = true;
+    }
+    if (keys.has("ArrowDown") || touchState.down) {
+      ax -= hx * ship.brake;
+      az -= hz * ship.brake;
+    }
+
+    ship.vx += ax * dt;
+    ship.vy += az * dt;
+
+    // const damping = Math.pow(0.999, dt * 60);
+    // ship.vx *= damping;
+    // ship.vy *= damping;
+
+    // moins d'inertie : damping plus fort, et encore plus fort quand tu ne pousses pas
+    const baseDamp  = Math.pow(0.999, dt * 60);               // toujours actif
+    const coastDamp = thrusting ? 1.0 : Math.pow(0.990, dt * 60); // quand pas de poussée
+    ship.vx *= baseDamp * coastDamp;
+    ship.vy *= baseDamp * coastDamp;
+
+
+    const sp = Math.hypot(ship.vx, ship.vy);
+    if (sp > ship.maxSpeed) {
+      ship.vx = ship.vx / sp * ship.maxSpeed;
+      ship.vy = ship.vy / sp * ship.maxSpeed;
+    }
+
+    ship.x += ship.vx * dt;
+    ship.y += ship.vy * dt;
+
+    const targetRoll = turn * 0.45;
+    ship.roll += (targetRoll - ship.roll) * (1 - Math.exp(-12 * dt));
+    const targetPitch = thrusting ? -0.18 : 0.0;
+    ship.pitch += (targetPitch - ship.pitch) * (1 - Math.exp(-8 * dt));
+
+    for (const st of stars) {
+      const c = worldToCamera(st.wx, st.wy, st.wz);
+      if (c.z < STAR_Z_NEAR) spawnStarInFront(st);
+    }
+
+    if (shotT > 0) {
+      shotT -= dt;
+      shotLen += LASER_SPEED * dt;
+    } else {
+      shotLen = 0;
+    }
+
+    animClock += dt;
+  }
+
+  function render(){
+    const w = innerWidth, h = innerHeight;
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, w, h);
+
+    const cx = w * 0.5, cy = h * 0.5;
+    const fProj = Math.min(w, h) * 0.55;
+
+    const SHIP_Y_OFFSET = Math.min(90, h * 0.14);
+    const cyShip = cy + SHIP_Y_OFFSET;
+
+    // -----------------------------
+    // Stars
+    // -----------------------------
+    const speed = Math.hypot(ship.vx, ship.vy);
+    const tailBase = Math.max(0.0, Math.min(32.0, speed * 0.07));
+
+    ctx.strokeStyle = "#bff";
+    ctx.lineWidth = 1;
+    ctx.lineCap = "round";
+
+    for (const st of stars) {
+      const c = worldToCamera(st.wx, st.wy, st.wz);
+      if (c.z <= 80) { st.px = NaN; st.py = NaN; continue; }
+
+      const px = cx + (c.x / c.z) * fProj;
+      const py = cy - (c.y / c.z) * fProj;
+
+      if (px < -80 || px > w + 80 || py < -80 || py > h + 80) {
+        st.px = px; st.py = py;
+        continue;
+      }
+      if (!Number.isFinite(st.px) || !Number.isFinite(st.py)) {
+        st.px = px; st.py = py;
+        continue;
+      }
+
+      const mvx = px - st.px;
+      const mvy = py - st.py;
+      const mv2 = mvx*mvx + mvy*mvy;
+
+      const alpha = Math.max(0.10, Math.min(0.85, 1.0 - (c.z / STAR_Z_FAR)));
+      ctx.globalAlpha = alpha;
+
+      if (mv2 > 0.25 && tailBase > 0.8) {
+        const mv = Math.sqrt(mv2);
+        const extend = 1.0 + (tailBase / (1200.0 + c.z));
+        const tailX = px - (mvx / mv) * (mv * extend);
+        const tailY = py - (mvy / mv) * (mv * extend);
+
+        const perpX = -mvy / mv;
+        const perpY =  mvx / mv;
+        const curve = (ship.turnInput * 10.0 + ship.roll * 4.0) *
+                      (0.25 + Math.min(1.0, mv * 0.06));
+
+        const midX = (tailX + px) * 0.5;
+        const midY = (tailY + py) * 0.5;
+        const ctrlX = midX + perpX * curve;
+        const ctrlY = midY + perpY * curve;
+
+        ctx.beginPath();
+        ctx.moveTo(tailX, tailY);
+        ctx.quadraticCurveTo(ctrlX, ctrlY, px, py);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = "#bff";
+        ctx.fillRect(px, py, 1, 1);
+      }
+
+      st.px = px;
+      st.py = py;
+    }
+    ctx.globalAlpha = 1;
+
+    // -----------------------------
+    // Ship mask (decor only)
+    // -----------------------------
+    const scale = 3;
+    const fShip = 520;
+    const zOffset = 200;
+
+    const yaw = 0;
+    const pitch = ship.pitch;
+    const roll = -ship.roll;
+
+    const shipVerts3 = model.v.map(([x,y,z]) => {
+      let p = [x, y, z];
+      p = rotZ(p, roll);
+      p = rotX(p, pitch);
+      p = rotY(p, yaw);
+      return [p[0]*scale, p[1]*scale, p[2]*scale + zOffset];
+    });
+    const shipVerts2 = shipVerts3.map(v => project(v, fShip, cx, cyShip));
+
+    const outlineIdx = [0, 4, 6, 5, 3];
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.moveTo(shipVerts2[outlineIdx[0]][0], shipVerts2[outlineIdx[0]][1]);
+    for (let k = 1; k < outlineIdx.length; k++) {
+      const p = shipVerts2[outlineIdx[k]];
+      ctx.lineTo(p[0], p[1]);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.lineWidth = 10;
+    ctx.lineJoin = "round";
+    ctx.stroke();
+    ctx.restore();
+
+    // -----------------------------
+    // Planets as sprites
+    // -----------------------------
+    const target = acquireTarget();
+    const toDraw = [];
+    let targetDraw = null;
+
+    for (const p of planets) {
+      const c = worldToCamera(p.wx, p.wy || 0, p.wz);
+      if (c.z <= 80) continue;
+
+      const sx = cx + (c.x / c.z) * fProj;
+      const sy = cy - (c.y / c.z) * fProj;
+      const sr = (p.r / c.z) * fProj;
+
+      if (sr < 1) continue;
+      if (sx < -sr-160 || sx > w + sr+160 || sy < -sr-160 || sy > h + sr+160) continue;
+
+      const it = { p, c, sx, sy, sr };
+      toDraw.push(it);
+      if (target && p === target) targetDraw = it;
+    }
+    toDraw.sort((a,b) => b.c.z - a.c.z);
+
+    for (let i = 0; i < toDraw.length; i++) {
+      const it = toDraw[i];
+      const isTarget = target && it.p === target;
+
+      const fontSize = Math.max(8, Math.min(18, it.sr * 0.10));
+      const frame = getAsciiFrame(it.p.id, i * 0.7);
+      const color = "#3dff74";
+
+      drawAsciiSpriteCentered(it.sx, it.sy, frame, fontSize, color, isTarget);
+
+      if (isTarget) {
+        ctx.fillStyle = "#fff";
+        ctx.font = "12px monospace";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillText(it.p.name, it.sx - (it.p.name.length * 3), it.sy - it.sr - 10);
+      }
+    }
+
+    // -----------------------------
+    // Laser
+    // -----------------------------
+    if (shotT > 0) {
+      const aShot = Math.max(0, Math.min(1, shotT / SHOT_DURATION));
+
+      let ix = cx, iy = cy;
+      if (targetDraw) { ix = targetDraw.sx; iy = targetDraw.sy; }
+
+      const gunL = shipVerts2[1];
+      const gunR = shipVerts2[2];
+
+      function drawConeBeam(ox, oy, tx, ty) {
+        let dx = tx - ox;
+        let dy = ty - oy;
+        const L = Math.hypot(dx, dy);
+        if (L < 1) return;
+
+        dx /= L; dy /= L;
+
+        const endLen = Math.min(shotLen, L);
+        const ex = ox + dx * endLen;
+        const ey = oy + dy * endLen;
+
+        const px = -dy, py = dx;
+
+        const wNear = 6.0 * aShot;
+        const wFar  = Math.max(0.6, wNear * 0.15);
+
+        ctx.fillStyle = `rgba(180,255,255,${0.35 * aShot})`;
+        ctx.beginPath();
+        ctx.moveTo(ox + px * wNear, oy + py * wNear);
+        ctx.lineTo(ox - px * wNear, oy - py * wNear);
+        ctx.lineTo(ex - px * wFar,  ey - py * wFar);
+        ctx.lineTo(ex + px * wFar,  ey + py * wFar);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = `rgba(255,255,255,${0.75 * aShot})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(ox, oy);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+      }
+
+      drawConeBeam(gunL[0], gunL[1], ix, iy);
+      drawConeBeam(gunR[0], gunR[1], ix, iy);
+    }
+
+    // -----------------------------
+    // Ship wireframe
+    // -----------------------------
+    ctx.strokeStyle = "#9ff";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (const [i,j] of model.e) {
+      const a2 = shipVerts2[i];
+      const b2 = shipVerts2[j];
+      ctx.moveTo(a2[0], a2[1]);
+      ctx.lineTo(b2[0], b2[1]);
+    }
+    ctx.stroke();
+
+    // -----------------------------
+    // Indicator under ship when target is in sight
+    // -----------------------------
+    if (target) {
+      const msg = "PRESS SPACE TO SHOOT";
+
+      ctx.save();
+      ctx.font = "700 12px monospace";
+      ctx.textBaseline = "top";
+
+      const textW = ctx.measureText(msg).width;
+      const x = cx - textW / 2;
+      const y = cyShip + Math.max(40, SHIP_Y_OFFSET * 0.55);
+
+      // shadow
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = "rgba(0,0,0,0.6)";
+      ctx.fillText(msg, x + 1, y + 1);
+
+      // terminal green
+      ctx.globalAlpha = 0.95;
+      ctx.fillStyle = "#3dff74";
+      ctx.fillText(msg, x, y);
+
+      ctx.restore();
+    }
+
+    // -----------------------------
+    // Crosshair
+    // -----------------------------
+    ctx.strokeStyle = "#9ff";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 8, cy); ctx.lineTo(cx - 2, cy);
+    ctx.moveTo(cx + 2, cy); ctx.lineTo(cx + 8, cy);
+    ctx.moveTo(cx, cy - 8); ctx.lineTo(cx, cy - 2);
+    ctx.moveTo(cx, cy + 2); ctx.lineTo(cx, cy + 8);
+    ctx.stroke();
+
+    // -----------------------------
+    // HUD
+    // -----------------------------
+    ctx.fillStyle = "#3dff74";
+    ctx.font = "12px monospace";
+    const sp = Math.hypot(ship.vx, ship.vy);
+    const tname = target ? target.name : "-";
+    ctx.fillText(`SPD ${sp.toFixed(1)}  TARGET ${tname}  [SPACEBAR]=SHOOT`, 12, h - 14);
+    if (shotName) {
+      ctx.fillStyle = "#fff";
+      ctx.fillText(`OPEN: ${shotName}`, 12, h - 30);
+    }
+  }
+
+
+  requestAnimationFrame(tick);
+})();
+</script>
+
+
+</body>
+</html>
