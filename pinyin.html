@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Entraînement caractères chinois - Pinyin → Hanzi</title>
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    .app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      gap: 16px;
+    }
+
+    header {
+      grid-column: 1 / -1;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      margin: 0 0 4px;
+    }
+
+    header p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #555;
+    }
+
+    .panel {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+      padding: 12px 14px;
+    }
+
+    .panel h2 {
+      font-size: 1.05rem;
+      margin: 0 0 8px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 4px;
+    }
+
+    .config-table-wrapper {
+      max-height: 70vh;
+      overflow: auto;
+      border: 1px solid #eee;
+      border-radius: 6px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #f0f0f0;
+      text-align: left;
+    }
+
+    th {
+      background: #fafafa;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tr:nth-child(even) td {
+      background: #fcfcfc;
+    }
+
+    input[type="checkbox"] {
+      transform: scale(1.1);
+    }
+
+    .hanzi-input {
+      width: 100%;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 4px;
+      font-size: 0.95rem;
+      text-align: center;
+    }
+
+    .pinyin-cell {
+      font-weight: 600;
+    }
+
+    .tone {
+      font-size: 0.8rem;
+      color: #888;
+    }
+
+    .small-text {
+      font-size: 0.8rem;
+      color: #777;
+    }
+
+    /* Zone d'entraînement */
+    .training-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .current-pinyin {
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+
+    .current-hanzi {
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: 4px;
+    }
+
+    .hanzi-hidden {
+      filter: blur(6px);
+      opacity: 0.5;
+    }
+
+    .stats {
+      font-size: 0.85rem;
+      color: #555;
+      text-align: right;
+    }
+
+    .canvas-wrapper {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fafafa;
+      margin-bottom: 8px;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 320px;
+      touch-action: none;
+      background: #fff;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    button {
+      border-radius: 999px;
+      border: 1px solid #ccc;
+      padding: 6px 14px;
+      font-size: 0.9rem;
+      background: #f8f8f8;
+      cursor: pointer;
+      transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+    }
+
+    button.primary {
+      background: #2563eb;
+      border-color: #1d4ed8;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    button.success {
+      background: #16a34a;
+      border-color: #15803d;
+      color: #fff;
+    }
+
+    button.danger {
+      background: #dc2626;
+      border-color: #b91c1c;
+      color: #fff;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    button:hover:not(:disabled) {
+      background: #eaeaea;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    }
+
+    button.primary:hover:not(:disabled) {
+      background: #1d4ed8;
+    }
+
+    button.success:hover:not(:disabled) {
+      background: #15803d;
+    }
+
+    button.danger:hover:not(:disabled) {
+      background: #b91c1c;
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(1px);
+      box-shadow: none;
+    }
+
+    .info-line {
+      font-size: 0.8rem;
+      color: #666;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid #ddd;
+      font-size: 0.75rem;
+      gap: 6px;
+      background: #fafafa;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #16a34a;
+    }
+
+    .badge-dot.off {
+      background: #9ca3af;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      header {
+        margin-bottom: 0;
+      }
+    }
+
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Entraînement à l'écriture de caractères chinois</h1>
+    <p>Affichage aléatoire d’un pinyin, écriture du caractère correspondant sur le canvas, puis auto-correction.</p>
+  </header>
+
+  <!-- Panneau configuration des caractères -->
+  <section class="panel">
+    <h2>1. Sélection du jeu de caractères</h2>
+    <p class="small-text">
+      Coche les éléments à inclure. Tu peux modifier la colonne « Caractère » pour adapter à ton propre vocabulaire.
+    </p>
+    <div class="config-table-wrapper">
+      <table>
+        <thead>
+        <tr>
+          <th>Inclure</th>
+          <th>Pinyin</th>
+          <th>Caractère (éditable)</th>
+        </tr>
+        </thead>
+        <tbody id="config-body">
+        <!-- Rempli dynamiquement -->
+        </tbody>
+      </table>
+    </div>
+    <p class="small-text">
+      Remarque: la logique ne fait pas de reconnaissance d’écriture; tu compares visuellement ton tracé avec le caractère.
+    </p>
+  </section>
+
+  <!-- Panneau entraînement -->
+  <section class="panel">
+    <div class="training-header">
+      <div>
+        <div class="info-line">
+          Pinyin actuel:
+        </div>
+        <div id="current-pinyin" class="current-pinyin">–</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="info-line">Caractère correct:</div>
+        <div id="current-hanzi" class="current-hanzi hanzi-hidden">?</div>
+      </div>
+    </div>
+
+    <div class="canvas-wrapper">
+      <canvas id="canvas" width="800" height="400"></canvas>
+    </div>
+
+    <div class="toolbar">
+      <button id="btn-new" class="primary">Nouvelle carte aléatoire</button>
+      <button id="btn-show" disabled>Afficher le caractère</button>
+      <button id="btn-clear" class="danger">Effacer le tracé</button>
+      <button id="btn-correct" class="success" disabled>Réussi</button>
+      <button id="btn-wrong" class="danger" disabled>Raté</button>
+    </div>
+
+    <div class="training-header" style="margin-top:4px;">
+      <div class="badge">
+        <span id="badge-dot" class="badge-dot off"></span>
+        <span id="badge-text">En attente d’un essai…</span>
+      </div>
+      <div id="stats" class="stats">
+        Score: 0 / 0 (0 %) — Série actuelle: 0
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  // Jeu initial basé sur ta liste de pinyin.
+  // Tu peux ajuster les caractères si tu travailles sur un autre corpus.
+  const characters = [
+    { id: 'pang',  pinyin: 'páng',  hanzi: '旁',  enabled: true },
+    { id: 'hu',    pinyin: 'hú',    hanzi: '胡',  enabled: true },
+    { id: 'xiang', pinyin: 'xiàng', hanzi: '像', enabled: true },
+    { id: 'ban',   pinyin: 'bàn',   hanzi: '祥',  enabled: true },
+    { id: 'chao',  pinyin: 'chāo',  hanzi: '超', enabled: true },
+    { id: 'shi',   pinyin: 'shì',   hanzi: '市',  enabled: true },
+    { id: 'chang1',pinyin: 'cháng', hanzi: '尝', enabled: true },
+    { id: 'rong',  pinyin: 'róng',  hanzi: '容', enabled: true },
+    { id: 'yuan',  pinyin: 'yuàn',  hanzi: '院', enabled: true },
+    { id: 'jiao',  pinyin: 'jiāo',  hanzi: '交', enabled: true },
+    { id: 'tong',  pinyin: 'tōng',  hanzi: '通', enabled: true },
+    { id: 'chang2',pinyin: 'cheng', hanzi: '成', enabled: true },
+    { id: 'lin',   pinyin: 'lín',   hanzi: '邻', enabled: true },
+    { id: 'ju',    pinyin: 'jū',    hanzi: '居', enabled: true },
+    { id: 'jiao',  pinyin: 'jiǎo',  hanzi: '饺', enabled: true },
+    { id: 'gang',  pinyin: 'gāng',  hanzi: '刚', enabled: true },
+    { id: 'can',   pinyin: 'cān',   hanzi: '参', enabled: true },
+    { id: 'guan1', pinyin: 'guān',  hanzi: '观', enabled: true },
+    { id: 'guan2', pinyin: 'guān',  hanzi: '关', enabled: true },
+    { id: 'xi',    pinyin: 'xī',    hanzi: '系',  enabled: true },
+    { id: 'li',    pinyin: 'lí',    hanzi: '离',  enabled: true },
+    { id: 'jiu',   pinyin: 'jiù',   hanzi: '就', enabled: true },
+    { id: 'pao',   pinyin: 'pǎo',   hanzi: '跑', enabled: true },
+    { id: 'bu',    pinyin: 'bù',    hanzi: '步', enabled: true },
+    { id: 'xi2',   pinyin: 'xí',    hanzi: '习', enabled: true },
+    { id: 'guan3', pinyin: 'guàn',  hanzi: '惯', enabled: true },
+    { id: 'duan3', pinyin: 'duàn',  hanzi: '锻', enabled: true },
+    { id: 'lian',  pinyin: 'liàn',  hanzi: '练', enabled: true },
+    { id: 'ban2',  pinyin: 'bān',   hanzi: '般', enabled: true },
+    { id: 'la',    pinyin: 'là',    hanzi: '辣', enabled: true },
+    { id: 'suan',  pinyin: 'suān',  hanzi: '酸', enabled: true },
+    { id: 'san',   pinyin: 'sàn',   hanzi: '散', enabled: true },
+    { id: 'you',   pinyin: 'yóu',   hanzi: '油', enabled: true },
+    { id: 'ni',    pinyin: 'nì',    hanzi: '腻', enabled: true },
+    { id: 'qing',  pinyin: 'qīng',  hanzi: '清', enabled: true },
+    { id: 'dan3',  pinyin: 'dàn',  hanzi: '淡', enabled: true },
+    { id: 'yin',   pinyin: 'yīn',   hanzi: '应', enabled: true },
+    { id: 'gai',   pinyin: 'gāi',   hanzi: '该', enabled: true },
+    { id: 'yifu', pinyin: 'yīfu', hanzi: '衣服', enabled: true },
+    { id: 'baihuo', pinyin: 'bǎihuò', hanzi: '百货', enabled: true },
+    { id: 'shangchang', pinyin: 'shāngchǎng', hanzi: '商场', enabled: true },
+    { id: 'zhuanmaidian', pinyin: 'zhuānmàidiàn', hanzi: '专卖店', enabled: true },
+    { id: 'youshihou', pinyin: 'yǒu shíhou', hanzi: '有时候', enabled: true },
+    { id: 'dingzuo', pinyin: 'dìngzuò', hanzi: '定做', enabled: true },
+    { id: 'chabuduo', pinyin: 'chàbuduō', hanzi: '差不多', enabled: true },
+    { id: 'xiaci', pinyin: 'xià cì', hanzi: '下次', enabled: true },
+    { id: 'dayi', pinyin: 'dà yī', hanzi: '大衣', enabled: true },
+    { id: 'jianyi', pinyin: 'jiànyì', hanzi: '建议', enabled: true },
+    { id: 'liwu', pinyin: 'lǐwù', hanzi: '礼物', enabled: true },
+    { id: 'juede', pinyin: 'juéde', hanzi: '觉得', enabled: true },
+    { id: 'heshi', pinyin: 'héshì', hanzi: '合适', enabled: true },
+    { id: 'jiaqian', pinyin: 'jiàqián', hanzi: '价钱', enabled: true },
+    { id: 'nianqingren', pinyin: 'niánqīngrén', hanzi: '年轻人', enabled: true },
+    { id: 'bucuo', pinyin: 'búcuò', hanzi: '不错', enabled: true },
+    { id: 'gaoxing', pinyin: 'gāoxìng', hanzi: '高兴', enabled: true }
+
+  ];
+
+  let currentItem = null;
+  let solutionRevealed = false;
+  const stats = {
+    correct: 0,
+    total: 0,
+    streak: 0
+  };
+
+  const elements = {
+    configBody: document.getElementById('config-body'),
+    currentPinyin: document.getElementById('current-pinyin'),
+    currentHanzi: document.getElementById('current-hanzi'),
+    btnNew: document.getElementById('btn-new'),
+    btnShow: document.getElementById('btn-show'),
+    btnClear: document.getElementById('btn-clear'),
+    btnCorrect: document.getElementById('btn-correct'),
+    btnWrong: document.getElementById('btn-wrong'),
+    stats: document.getElementById('stats'),
+    badgeDot: document.getElementById('badge-dot'),
+    badgeText: document.getElementById('badge-text'),
+    canvas: document.getElementById('canvas')
+  };
+
+  // Initialisation du tableau de configuration
+  function renderConfigTable() {
+    elements.configBody.innerHTML = '';
+    characters.forEach((char, index) => {
+      const tr = document.createElement('tr');
+
+      const tdCheck = document.createElement('td');
+      const check = document.createElement('input');
+      check.type = 'checkbox';
+      check.checked = char.enabled;
+      check.addEventListener('change', () => {
+        char.enabled = check.checked;
+      });
+      tdCheck.appendChild(check);
+
+      const tdPinyin = document.createElement('td');
+      tdPinyin.className = 'pinyin-cell';
+      tdPinyin.textContent = char.pinyin;
+
+      const tdHanzi = document.createElement('td');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.maxLength = 4;
+      input.value = char.hanzi;
+      input.className = 'hanzi-input';
+      input.addEventListener('input', () => {
+        char.hanzi = input.value.trim() || '?';
+      });
+      tdHanzi.appendChild(input);
+
+      tr.appendChild(tdCheck);
+      tr.appendChild(tdPinyin);
+      tr.appendChild(tdHanzi);
+
+      elements.configBody.appendChild(tr);
+    });
+  }
+
+  // Gestion du canvas
+  let ctx;
+  let drawing = false;
+  let lastX = 0;
+  let lastY = 0;
+
+  function setupCanvas() {
+    ctx = elements.canvas.getContext('2d');
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    function getPos(e) {
+      const rect = elements.canvas.getBoundingClientRect();
+      let clientX, clientY;
+
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+
+      return {
+        x: (clientX - rect.left) * (elements.canvas.width / rect.width),
+        y: (clientY - rect.top) * (elements.canvas.height / rect.height)
+      };
+    }
+
+    function startDrawing(e) {
+      e.preventDefault();
+      drawing = true;
+      const pos = getPos(e);
+      lastX = pos.x;
+      lastY = pos.y;
+    }
+
+    function draw(e) {
+      if (!drawing) return;
+      e.preventDefault();
+      const pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+      lastX = pos.x;
+      lastY = pos.y;
+    }
+
+    function stopDrawing(e) {
+      if (!drawing) return;
+      e && e.preventDefault();
+      drawing = false;
+    }
+
+    elements.canvas.addEventListener('mousedown', startDrawing);
+    elements.canvas.addEventListener('mousemove', draw);
+    elements.canvas.addEventListener('mouseup', stopDrawing);
+    elements.canvas.addEventListener('mouseleave', stopDrawing);
+
+    elements.canvas.addEventListener('touchstart', startDrawing, { passive: false });
+    elements.canvas.addEventListener('touchmove', draw, { passive: false });
+    elements.canvas.addEventListener('touchend', stopDrawing, { passive: false });
+    elements.canvas.addEventListener('touchcancel', stopDrawing, { passive: false });
+
+    clearCanvas();
+  }
+
+  function clearCanvas() {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, elements.canvas.width, elements.canvas.height);
+  }
+
+  // Sélection aléatoire d’un item actif
+  function getActiveItems() {
+    return characters.filter(c => c.enabled && c.hanzi && c.hanzi !== '?');
+  }
+
+  function pickRandomItem() {
+    const active = getActiveItems();
+    if (active.length === 0) {
+      alert('Aucun caractère sélectionné ou défini. Active au moins un élément et renseigne le caractère.');
+      return null;
+    }
+    const idx = Math.floor(Math.random() * active.length);
+    return active[idx];
+  }
+
+  function refreshStats() {
+    const { correct, total, streak } = stats;
+    const ratio = total === 0 ? 0 : Math.round((correct / total) * 100);
+    elements.stats.textContent =
+      `Score: ${correct} / ${total} (${ratio} %) — Série actuelle: ${streak}`;
+  }
+
+  function setBadge(state, text) {
+    if (state === 'idle') {
+      elements.badgeDot.classList.add('off');
+      elements.badgeText.textContent = text || 'En attente d’un essai…';
+    } else if (state === 'correct') {
+      elements.badgeDot.classList.remove('off');
+      elements.badgeText.textContent = text || 'Marqué comme réussi';
+    } else if (state === 'wrong') {
+      elements.badgeDot.classList.remove('off');
+      elements.badgeText.textContent = text || 'Marqué comme raté';
+    }
+  }
+
+  function newCard() {
+    const item = pickRandomItem();
+    if (!item) return;
+    currentItem = item;
+    solutionRevealed = false;
+
+    elements.currentPinyin.textContent = item.pinyin;
+    elements.currentHanzi.textContent = item.hanzi || '?';
+    elements.currentHanzi.classList.add('hanzi-hidden');
+
+    clearCanvas();
+
+    elements.btnShow.disabled = false;
+    elements.btnCorrect.disabled = true;
+    elements.btnWrong.disabled = true;
+
+    setBadge('idle');
+  }
+
+  function showSolution() {
+    if (!currentItem) return;
+    solutionRevealed = true;
+    elements.currentHanzi.classList.remove('hanzi-hidden');
+    elements.btnCorrect.disabled = false;
+    elements.btnWrong.disabled = false;
+    setBadge('idle', 'Compare ton tracé puis évalue (Réussi/Raté)');
+  }
+
+  function markResult(isCorrect) {
+    if (!currentItem) return;
+    stats.total += 1;
+    if (isCorrect) {
+      stats.correct += 1;
+      stats.streak += 1;
+      setBadge('correct');
+    } else {
+      stats.streak = 0;
+      setBadge('wrong');
+    }
+    refreshStats();
+    newCard();
+  }
+
+  // Wiring des boutons
+  function bindControls() {
+    elements.btnNew.addEventListener('click', () => {
+      newCard();
+    });
+
+    elements.btnShow.addEventListener('click', () => {
+      showSolution();
+    });
+
+    elements.btnClear.addEventListener('click', () => {
+      clearCanvas();
+    });
+
+    elements.btnCorrect.addEventListener('click', () => {
+      markResult(true);
+    });
+
+    elements.btnWrong.addEventListener('click', () => {
+      markResult(false);
+    });
+  }
+
+  // Initialisation globale
+  function init() {
+    renderConfigTable();
+    setupCanvas();
+    bindControls();
+    refreshStats();
+    setBadge('idle');
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
