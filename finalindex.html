@@ -1,0 +1,1779 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Portfolio BIECHE Matys Adéas</title>
+  <style>
+    html, body { margin:0; height:100%; background:#000; overflow:hidden; }
+    canvas { display:block; width:100vw; height:100vh; }
+    .hud{
+      position:fixed; left:12px; top:10px; color:#3dff74; font:12px/1.4 monospace;
+      user-select:none; opacity:.9;
+    }
+
+    .hidden { display: none; }
+
+    .portfolio-popup {
+      position: fixed;
+      top: 20%;
+      left: 30%;
+      width: 520px;
+      max-width: calc(100vw - 40px);
+      background-color: #111;
+      border: 2px solid #34fc47;
+      color: #34fc47;
+      z-index: 2000;
+      padding: 1em;
+      border-radius: 6px;
+      box-shadow: none;
+      font-family: monospace;
+    }
+
+    .popup-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: move;
+      margin-bottom: 0.8em;
+    }
+
+    .popup-close {
+      background: none;
+      border: none;
+      color: #34fc47;
+      font-size: 1.1em;
+      cursor: pointer;
+    }
+
+    .popup-content ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .popup-content li {
+      margin: 0.6em 0;
+    }
+
+    .popup-content a {
+      color: #34fc47;
+      text-decoration: underline;
+    }
+
+    .touch-ui{
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      z-index: 3000;
+      display: none; /* activé sur mobile via media query */
+      gap: 10px;
+      align-items: flex-end;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    .touch-pad{
+      position: relative;
+      width: 140px;
+      height: 140px;
+    }
+
+    .tbtn{
+      font-family: monospace;
+      color: #34fc47;
+      background: rgba(0,0,0,0.55);
+      border: 2px solid #34fc47;
+      border-radius: 10px;
+      box-shadow: none;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .tbtn:active{
+      background: rgba(52,252,71,0.12);
+    }
+
+    .touch-pad .tbtn{
+      position: absolute;
+      width: 52px;
+      height: 52px;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .touch-pad .up{ left: 44px; top: 0; }
+    .touch-pad .down{ left: 44px; bottom: 0; }
+    .touch-pad .left{ left: 0; top: 44px; }
+    .touch-pad .right{ right: 0; top: 44px; }
+
+    .tbtn.fire{
+      width: 92px;
+      height: 92px;
+      border-radius: 16px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    /* mobile / tactile */
+    @media (hover: none), (pointer: coarse) {
+      .touch-ui{ display: flex; }
+    }
+
+
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud">
+  Controls: ← → Turn | ↑ thrust | ↓ brake<br>
+  R: reset
+</div>
+
+<div id="portfolio-popup" class="portfolio-popup hidden">
+  <div class="popup-header" id="popup-header">
+    <span>Projects</span>
+    <button class="popup-close" id="popup-close">X</button>
+  </div>
+  <div class="popup-content">
+    <ul>
+      <li><a href="./portfolio/assets/pdf/CR_Stage_2A_SEatech (5).pdf" target="_blank">Tokyo University of Science : Low-Cost Underwater Communication Device for Fish-type Robot</a></li>
+      <li><a href="./portfolio/assets/pdf/project1.pdf" target="_blank">Suivi furtif de cible autonome avec un robot sous-marin type BlueRov2</a></li>
+      <li><a href="./portfolio/assets/pdf/project2.pdf" target="_blank">Camera Alignment Tool for the Security of Toulon harbor</a></li>
+      <li><a href="./portfolio/assets/pdf/project3.pdf" target="_blank">Dassault UAV Challenge : Tilt Rotor VTOL UAV for sea rescue operations</a></li>
+    </ul>
+  </div>
+</div>
+
+<div class="touch-ui" id="touch-ui">
+  <div class="touch-pad">
+    <button class="tbtn up"    data-action="up">▲</button>
+    <button class="tbtn left"  data-action="left">◀</button>
+    <button class="tbtn right" data-action="right">▶</button>
+    <button class="tbtn down"  data-action="down">▼</button>
+  </div>
+  <button class="tbtn fire" data-action="fire">FIRE</button>
+</div>
+
+
+<script>
+(() => {
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d", { alpha: false }) || canvas.getContext("2d");
+  if (!ctx) {
+    document.body.innerHTML = "<pre style=\"color:#3dff74;background:#000;padding:16px;font:14px/1.4 monospace\">Canvas 2D context unavailable.</pre>";
+    return;
+  }
+
+  // Basic error overlay (avoids "blank screen" on syntax/runtime issues)
+  window.addEventListener("error", (e) => {
+    const pre = document.createElement("pre");
+    pre.style.cssText = "position:fixed;left:12px;top:12px;right:12px;max-height:45vh;overflow:auto;z-index:99999;background:rgba(0,0,0,0.85);border:1px solid #3dff74;color:#3dff74;padding:10px;font:12px/1.4 monospace";
+    pre.textContent = "JS error: " + (e.message || e.error) + (e.filename ? "\n" + e.filename + ":" + e.lineno : "");
+    document.body.appendChild(pre);
+  });
+
+  function resize() {
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    canvas.width = Math.floor(innerWidth * dpr);
+    canvas.height = Math.floor(innerHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  addEventListener("resize", resize);
+  resize();
+
+
+  // -----------------------------
+  // Performance / quality scaling
+  // -----------------------------
+  const IS_MOBILE = matchMedia("(pointer: coarse)").matches || matchMedia("(hover: none)").matches;
+  const PERF = {
+    avgMs: 16,
+    mode: 0, // 0=high, 1=mid, 2=low
+    shadowScaleBase: IS_MOBILE ? 0.70 : 1.00,
+    shadowScale: 1.00,
+    enableStarTrails: false
+  };
+
+  function perfUpdate(dt){
+    const ms = dt * 1000;
+    PERF.avgMs = PERF.avgMs * 0.92 + ms * 0.08;
+    PERF.mode = (PERF.avgMs > 24) ? 2 : (PERF.avgMs > 18 ? 1 : 0);
+    const m = PERF.mode;
+    PERF.shadowScale = PERF.shadowScaleBase * (m === 2 ? 0.45 : (m === 1 ? 0.75 : 1.00));
+    PERF.enableStarTrails = false;
+  }
+
+  // -----------------------------
+  // Portfolio targets (positions fixes en monde)
+  // -----------------------------
+  const planets = [
+    { id: "cv",       name: "Resume",       url: "portfolio/assets/pdf/Matys_Resume.pdf",              wx:    -1000, wz: 2600, wy:   0,  r: 260 },
+    { id: "linkedin", name: "LinkedIn", url: "https://www.linkedin.com/in/ad%C3%A9as-bieche/",     wx:  2500, wz: 3600, wy: 120,  r: 240 },
+    { id: "devmode",   name: "DevMode",   url: "devmode.html",              wx: -4000,wz: 4200, wy: -80,  r: 260 },
+    { id: "projects", name: "Projects", url: "#projects", wx: 100, wz: 1000, wy: 0, r: 260 },
+  ];
+
+
+  // -----------------------------
+  // ASCII sprites (frames)
+  // -----------------------------
+  const asciiSprites = {
+    // CV: parchemin plus "sophistiqué" (bord roulé + contenu)
+    cv: [
+` ########             ###            ###
+    ############           ###            ###
+   ###        ###           ###          ### 
+   ###                       ###        ###  
+   ###                       ###        ###  
+   ###                        ###      ###   
+   ###                        ###      ###   
+   ###                         ###    ###    
+   ###                         ###    ###    
+   ###                          ###  ###     
+    ############                 ######      
+      ########                    ####`,
+`     ########             ###            ###
+    ############           ###            ###
+   ###        ###           ###          ### 
+   ###                       ###        ###  
+   ###                       ###        ###  
+   ###                        ###      ###   
+   ###                        ###      ###   
+   ###                         ###    ###    
+   ###                         ###    ###    
+   ###                          ###  ###     
+    ############                 ######      
+      ########                    ####`,
+`  ########             ###            ###
+    ############           ###            ###
+   ###        ###           ###          ### 
+   ###                       ###        ###  
+   ###                       ###        ###  
+   ###                        ###      ###   
+   ###                        ###      ###   
+   ###                         ###    ###    
+   ###                         ###    ###    
+   ###                          ###  ###     
+    ############                 ######      
+      ########                    ####`,
+`  ########             ###            ###
+    ############           ###            ###
+   ###        ###           ###          ### 
+   ###                       ###        ###  
+   ###                       ###        ###  
+   ###                        ###      ###   
+   ###                        ###      ###   
+   ###                         ###    ###    
+   ###                         ###    ###    
+   ###                          ###  ###     
+    ############                 ######      
+      ########                    ####`
+    ],
+
+    // LinkedIn: tu as demandé d'utiliser exactement ce dessin
+    linkedin: [
+`                               
+    #######                    
+    #######                    
+      ###                      
+      ###        ##########    
+      ###        ##########    
+      ###        ###      ###  
+      ###        ###      ###  
+      ###        ###      ###  
+      ###        ###      ###  
+      ###        ###      ###  
+      ###        ###      ###  
+    #########    ###      ###  
+    #########    ###      ###  
+                               
+                               `,
+`                              
+     #######                   
+     #######                   
+       ###                     
+       ###       ##########    
+       ###       ##########    
+       ###       ###      ###  
+       ###       ###      ###  
+       ###       ###      ###  
+       ###       ###      ###  
+       ###       ###      ###  
+       ###       ###      ###  
+     #########   ###      ###  
+     #########   ###      ###  
+                              
+                              `,
+`                              
+      #######                  
+      #######                  
+        ###                    
+        ###      ##########    
+        ###      ##########    
+        ###      ###      ###  
+        ###      ###      ###  
+        ###      ###      ###  
+        ###      ###      ###  
+        ###      ###      ###  
+        ###      ###      ###  
+      #########  ###      ###  
+      #########  ###      ###  
+                              
+                              `,
+`                              
+     #######                   
+     #######                   
+       ###                     
+       ###       ##########    
+       ###       ##########    
+       ###       ###      ###  
+       ###       ###      ###  
+       ###       ###      ###  
+       ###       ###      ###  
+       ###       ###      ###  
+       ###       ###      ###  
+     #########   ###      ###  
+     #########   ###      ###  
+                              
+                              `
+    ],
+
+    // GitHub/terminal: tu as demandé d'utiliser exactement ce dessin
+    devmode: [
+`                                
+   ####                         
+    #####                       
+      ######                    
+        ######                  
+      ######                    
+    #####                       
+   ####                         
+                                
+                ############### 
+                ############### 
+                                `,
+`                                
+    ####                        
+     #####                      
+       ######                   
+         ######                 
+       ######                   
+     #####                      
+    ####                        
+                                
+                 ############## 
+                 ############## 
+                                `,
+`                                
+     ####                       
+      #####                     
+        ######                  
+          ######                
+        ######                  
+      #####                     
+     ####                       
+                                
+                  ############# 
+                  ############# 
+                                `,
+`                                
+    ####                        
+     #####                      
+       ######                   
+         ######                 
+       ######                   
+     #####                      
+    ####                        
+                                
+                 ############## 
+                 ############## 
+                                `
+    ],
+
+    projects: [
+`   [ PROJECTS ]
+     ( OPEN )
+`,
+`   < PROJECTS >
+     ( OPEN )
+`,
+`   { PROJECTS }
+     ( OPEN )
+`,
+`   ( PROJECTS )
+     ( OPEN )
+`
+],
+
+    enemy: [
+`     /\     
+  __/==\__  
+  \_====_/  
+    \/\/    `,
+`      /\    
+   __/==\__ 
+ __\_====_/ 
+    /__\    `,
+`    /\      
+ __/==\__   
+ \_====_/__ 
+   \/\/     `,
+`     /\     
+ __/==\__   
+ \_====_/   
+   /__\     `
+    ],
+
+    asteroid: [
+`     .--.     
+  .-(####)-.  
+ (##########) 
+  '-(####)-'  
+     '--'     `,
+`     .--.     
+ .-(#####)-.  
+(###########) 
+ '-(#####)-'  
+     '--'     `,
+`     .--.     
+  .-(####)-.  
+ (##########) 
+  '-(####)-'  
+     '--'     `,
+`     .--.     
+ .-(#####)-.  
+(###########) 
+ '-(#####)-'  
+     '--'     `
+    ]
+
+  };
+
+  // -----------------------------
+  // Input
+  // -----------------------------
+  const keys = new Set();
+  // -----------------------------
+// Touch controls (mobile)
+// -----------------------------
+  const touchState = { left:false, right:false, up:false, down:false };
+
+  // helper: set an action true/false
+  function setTouch(action, v){
+    if (action === "left") touchState.left = v;
+    if (action === "right") touchState.right = v;
+    if (action === "up") touchState.up = v;
+    if (action === "down") touchState.down = v;
+  }
+
+  // attach events to buttons
+  (function initTouchUI(){
+    const root = document.getElementById("touch-ui");
+    if (!root) return;
+
+    const btns = root.querySelectorAll("[data-action]");
+    btns.forEach(btn => {
+      const action = btn.getAttribute("data-action");
+
+      const start = (e) => {
+        e.preventDefault();
+        if (action === "fire") {
+          fire(); // tir direct sur appui
+        } else {
+          setTouch(action, true);
+        }
+      };
+
+      const end = (e) => {
+        e.preventDefault();
+        if (action !== "fire") setTouch(action, false);
+      };
+
+      btn.addEventListener("pointerdown", start, { passive:false });
+      btn.addEventListener("pointerup", end, { passive:false });
+      btn.addEventListener("pointercancel", end, { passive:false });
+      btn.addEventListener("pointerleave", end, { passive:false });
+    });
+
+    // safety: release all on touch end outside
+    addEventListener("pointerup", () => {
+      touchState.left = touchState.right = touchState.up = touchState.down = false;
+    });
+  })();
+
+  addEventListener("keydown", (e) => {
+    if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
+    if (e.key === " " && !e.repeat) fire();
+    keys.add(e.key);
+    if (e.key.toLowerCase() === "r") reset();
+  }, { passive: false });
+  addEventListener("keyup", (e) => keys.delete(e.key));
+
+  // -----------------------------
+  // Ship
+  // -----------------------------
+  const ship = {
+    x: 0, y: 0,
+    vx: 0, vy: 0,
+    a: 0,
+    turnRate: 2.6,
+    thrust: 110,
+    brake: 120,
+    maxSpeed: 200,
+    roll: 0,
+    pitch: 0,
+    turnInput: 0,
+    uiSway: 0,
+    uiSwayV: 0,
+    uiBase: 0,
+    uiBaseV: 0,
+    uiBaseHold: 0
+  
+  };
+
+  // -----------------------------
+  // Stars (world)
+  // -----------------------------
+  const stars = [];
+  const STAR_COUNT = IS_MOBILE ? 850 : 1200;
+  const STAR_XR = 1.35;
+  const STAR_YR = 0.85;
+  const STAR_Z_NEAR = 250;
+  const STAR_Z_FAR  = 9000;
+
+  function rand(min, max){ return min + Math.random()*(max-min); }
+
+  function spawnStarInFront(st) {
+    const fx = Math.sin(ship.a), fz = Math.cos(ship.a);
+    const rx = fz, rz = -fx;
+
+    const z = rand(STAR_Z_NEAR, STAR_Z_FAR);
+    const x = rand(-STAR_XR, STAR_XR) * z;
+    const y = rand(-STAR_YR, STAR_YR) * z;
+
+    st.wx = ship.x + rx * x + fx * z;
+    st.wz = ship.y + rz * x + fz * z;
+    st.wy = y;
+
+    st.px = NaN;
+    st.py = NaN;
+  }
+
+  function initStars() {
+    stars.length = 0;
+    for (let i = 0; i < STAR_COUNT; i++) {
+      const st = { wx: 0, wy: 0, wz: 0, px: NaN, py: NaN };
+      spawnStarInFront(st);
+      st.wx += rand(-500, 500);
+      st.wz += rand(-800, 800);
+      st.wy += rand(-200, 200);
+      stars.push(st);
+    }
+  }
+
+  // -----------------------------
+  // Hostiles (asteroids uniquement)
+  // -----------------------------
+  const hostiles = [];
+  const explosions = [];
+
+  const HOSTILE_MAX = IS_MOBILE ? 12 : 14;
+  const HOSTILE_SPAWN_EVERY = 1.35; // seconds
+  const HOSTILE_DESPAWN_Z = 14000;
+
+  let hostileSpawnT = 0;
+
+  let score = 0;
+  let kills = 0;
+  let hudEventT = 0;
+  let hudEventMsg = "";
+
+  function pushHudEvent(msg, ttl = 1.3) {
+    hudEventMsg = msg;
+    hudEventT = ttl;
+  }
+
+  function spawnHostile() {
+    // Asteroids only
+    const fx = Math.sin(ship.a), fz = Math.cos(ship.a);
+    const rx = fz, rz = -fx;
+
+    const z = rand(1400, 8200);
+    const x = rand(-0.85, 0.85) * z * 0.55;
+    const y = rand(-260, 260);
+
+    const wx = ship.x + rx * x + fx * z;
+    const wz = ship.y + rz * x + fz * z;
+    const wy = y;
+
+    const approach = rand(35, 85);
+    const strafe   = rand(-55, 55);
+    const driftY   = rand(-12, 12);
+
+    // Velocity in world-space (approach the player, with lateral drift)
+    const vx = -fx * approach + rx * strafe;
+    const vz = -fz * approach + rz * strafe;
+    const vy = driftY;
+
+    const r  = rand(28, 48);
+    const hp = 1;
+
+    const meshId = (ASTEROID_MESHES.length ? ((Math.random() * ASTEROID_MESHES.length) | 0) : 0);
+
+    hostiles.push({
+      kind: "asteroid",
+      name: "ASTEROID",
+      wx, wy, wz,
+      vx, vy, vz,
+      r,
+      hp,
+      t: 0,
+      phase: rand(0, Math.PI * 2),
+
+      // 3D state
+      meshId,
+      rx: rand(0, Math.PI * 2),
+      ry: rand(0, Math.PI * 2),
+      rz: rand(0, Math.PI * 2),
+      spinX: rand(-1.4, 1.4),
+      spinY: rand(-1.8, 1.8),
+      spinZ: rand(-1.2, 1.2)
+    });
+  }
+
+
+  function initHostiles() {
+    hostiles.length = 0;
+    explosions.length = 0;
+
+    hostileSpawnT = 0.25;
+
+    score = 0;
+    kills = 0;
+    hudEventT = 0;
+    hudEventMsg = "";
+
+    // Seed a few objects so the scene doesn't start empty.
+    for (let i = 0; i < 7; i++) spawnHostile();
+  }
+
+  function explodeAt(wx, wy, wz, strength = 1) {
+    explosions.push({ wx, wy, wz, t: 0, dur: 0.55 + 0.20 * strength, strength });
+  }
+
+  function damageHostile(h, dmg = 1) {
+    h.hp -= dmg;
+
+    if (h.hp <= 0) {
+      explodeAt(h.wx, h.wy, h.wz, 0.9);
+      const gain = 70;
+      score += gain;
+      kills += 1;
+      pushHudEvent(`${h.name} DESTROYED +${gain}`);
+
+      const idx = hostiles.indexOf(h);
+      if (idx >= 0) hostiles.splice(idx, 1);
+      return true;
+    }
+
+    pushHudEvent(`${h.name} HIT`);
+    return false;
+  }
+
+
+  // -----------------------------
+  // Ship wireframe
+  // -----------------------------
+  const model = {
+    v: [
+      [ 0,  0,  16],
+      [-8,  0,  -6],
+      [ 8,  0,  -6],
+      [-18, 0,  -2],
+      [ 18, 0,  -2],
+      [-6,  0, -16],
+      [ 6,  0, -16],
+      [ 0,  4,  -8],
+    ],
+    e: [
+      [0,1],[0,2],
+      [1,3],[2,4],
+      [1,5],[2,6],
+      [5,6],
+      [0,7],[7,5],[7,6]
+    ]
+  };
+
+
+  // -----------------------------
+  // Asteroid wireframe meshes (3D)
+  // -----------------------------
+  function mulberry32(seed){
+    let a = seed >>> 0;
+    return function(){
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function norm3([x,y,z]){
+    const L = Math.hypot(x,y,z) || 1;
+    return [x/L, y/L, z/L];
+  }
+
+  function buildEdgesByMinDist(verts){
+    // Build edges by detecting the nearest-neighbor distance in the base poly
+    let minD2 = Infinity;
+    for (let i = 0; i < verts.length; i++){
+      const a = verts[i];
+      for (let j = i + 1; j < verts.length; j++){
+        const b = verts[j];
+        const dx = a[0]-b[0], dy = a[1]-b[1], dz = a[2]-b[2];
+        const d2 = dx*dx + dy*dy + dz*dz;
+        if (d2 > 1e-12 && d2 < minD2) minD2 = d2;
+      }
+    }
+    const thr2 = minD2 * 1.08; // tolerance
+    const edges = [];
+    for (let i = 0; i < verts.length; i++){
+      const a = verts[i];
+      for (let j = i + 1; j < verts.length; j++){
+        const b = verts[j];
+        const dx = a[0]-b[0], dy = a[1]-b[1], dz = a[2]-b[2];
+        const d2 = dx*dx + dy*dy + dz*dz;
+        if (d2 <= thr2) edges.push([i,j]);
+      }
+    }
+    return edges;
+  }
+
+  const ICO_VERTS = (() => {
+    const phi = (1 + Math.sqrt(5)) / 2;
+    const base = [
+      [0, -1, -phi], [0, -1,  phi], [0,  1, -phi], [0,  1,  phi],
+      [-1, -phi, 0], [-1,  phi, 0], [ 1, -phi, 0], [ 1,  phi, 0],
+      [-phi, 0, -1], [ phi, 0, -1], [-phi, 0,  1], [ phi, 0,  1]
+    ];
+    return base.map(norm3);
+  })();
+
+  const ICO_EDGES = buildEdgesByMinDist(ICO_VERTS);
+
+  function makeAsteroidMesh(seed){
+    const rng = mulberry32(seed);
+    const verts = ICO_VERTS.map(([x,y,z]) => {
+      // radial perturbation (keeps a low-poly 3D rock silhouette)
+      const k = 0.78 + rng() * 0.44;
+      return [x * k, y * k, z * k];
+    });
+    return { v: verts, e: ICO_EDGES };
+  }
+
+  const ASTEROID_MESHES = (() => {
+    const meshes = [];
+    for (let i = 0; i < 8; i++){
+      const seed = ((Math.random() * 1e9) | 0) ^ (i * 0x9E3779B9);
+      meshes.push(makeAsteroidMesh(seed));
+    }
+    return meshes;
+  })();
+
+  // -----------------------------
+  // Math + camera
+  // -----------------------------
+  function rotX([x,y,z], r){
+    const c = Math.cos(r), s = Math.sin(r);
+    return [x, y*c - z*s, y*s + z*c];
+  }
+  function rotY([x,y,z], r){
+    const c = Math.cos(r), s = Math.sin(r);
+    return [x*c + z*s, y, -x*s + z*c];
+  }
+  function rotZ([x,y,z], r){
+    const c = Math.cos(r), s = Math.sin(r);
+    return [x*c - y*s, x*s + y*c, z];
+  }
+  function project([x,y,z], f, cx, cy){
+    const zz = Math.max(0.01, z);
+    return [cx + (x/zz)*f, cy - (y/zz)*f];
+  }
+
+  function worldToCamera(wx, wy, wz) {
+    const dx = wx - ship.x;
+    const dz = wz - ship.y;
+
+    const fx = Math.sin(ship.a);
+    const fz = Math.cos(ship.a);
+    const rx = fz;
+    const rz = -fx;
+
+    return {
+      x: dx * rx + dz * rz,
+      y: wy,
+      z: dx * fx + dz * fz
+    };
+  }
+
+  // -----------------------------
+  // Targeting / shooting
+  // -----------------------------
+  function acquireTarget() {
+    // Screen-space targeting (matches what is actually drawn, including warp & sprite size)
+    const w = innerWidth, h = innerHeight;
+    const cx = w * 0.5, cy = h * 0.5;
+    const fProj = Math.min(w, h) * 0.55;
+
+    const speed = Math.hypot(ship.vx, ship.vy);
+    const speedN = Math.max(0, Math.min(1, speed / ship.maxSpeed));
+
+    const maxR = Math.max(cx, cy);
+    const invMaxR2 = 1 / (maxR * maxR);
+    const warpK = 0.22 * speedN;
+
+    function warpWorld(px, py) {
+      const dx = px - cx;
+      const dy = py - cy;
+      const t = (dx*dx + dy*dy) * invMaxR2;
+      const s = 1 + warpK * t;
+      return [cx + dx * s, cy + dy * s, s];
+    }
+
+    function tryItem(obj, type, spriteKey, radius) {
+      const c = worldToCamera(obj.wx, obj.wy || 0, obj.wz);
+      if (c.z <= 80) return null;
+
+      const sx0 = cx + (c.x / c.z) * fProj;
+      const sy0 = cy - (c.y / c.z) * fProj;
+      const wp  = warpWorld(sx0, sy0);
+
+      const sx = wp[0];
+      const sy = wp[1];
+      const ws = wp[2];
+
+      const sr = (radius / c.z) * fProj * ws;
+      const fontSize = Math.max(8, Math.min(18, sr * 0.10));
+
+      // Hostiles are rendered as real 3D wireframes -> radius-based hit
+      let hitR;
+      if (type === "hostile") {
+        hitR = sr + 18;
+      } else {
+        const frame = getAsciiFrame(spriteKey, 0);
+        const met = getAsciiMetrics(frame, fontSize);
+        const pad = Math.max(12, met.fontSize * 0.9);
+        hitR = 0.5 * Math.hypot(met.w, met.h) + pad;
+      }
+
+      const dx = sx - cx;
+      const dy = sy - cy;
+      const d2 = dx*dx + dy*dy;
+
+      if (d2 <= hitR*hitR) return { type, obj, sx, sy, z: c.z };
+      return null;
+    }
+
+    let best = null;
+    let bestZ = Infinity;
+
+    // Priority: combat targets first, then portfolio planets
+    for (const h of hostiles) {
+      const t = tryItem(h, "hostile", h.kind, h.r);
+      if (t && t.z < bestZ) {
+        best = t;
+        bestZ = t.z;
+      }
+    }
+
+    for (const p of planets) {
+      const t = tryItem(p, "planet", p.id, p.r);
+      if (t && t.z < bestZ) {
+        best = t;
+        bestZ = t.z;
+      }
+    }
+
+    return best;
+  }
+
+  function openLink(url) {
+    if (url === "#projects") {
+      openProjectsPopup();
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+
+  let shotT = 0;
+  let shotName = "";
+  let shotLen = 0;
+  let shotAimX = NaN;
+  let shotAimY = NaN;
+  const LASER_SPEED = 22000;
+  const SHOT_DURATION = 0.10;
+
+    function fire() {
+    shotT = SHOT_DURATION;
+    shotLen = 0;
+
+    // Default aim: crosshair center
+    shotAimX = innerWidth * 0.5;
+    shotAimY = innerHeight * 0.5;
+
+    const t = acquireTarget();
+    if (t) {
+      shotAimX = t.sx;
+      shotAimY = t.sy;
+
+      if (t.type === "hostile") {
+        shotName = "";
+        damageHostile(t.obj, 1);
+      } else {
+        shotName = t.obj.name;
+        openLink(t.obj.url);
+      }
+    } else {
+      shotName = "";
+    }
+  }
+
+  function openProjectsPopup() {
+  const popup = document.getElementById("portfolio-popup");
+  if (popup) popup.classList.remove("hidden");
+}
+
+  function closeProjectsPopup() {
+    const popup = document.getElementById("portfolio-popup");
+    if (popup) popup.classList.add("hidden");
+  }
+
+  // init popup events (close + draggable)
+  (function initProjectsPopupUI(){
+    const popup = document.getElementById("portfolio-popup");
+    const closeBtn = document.getElementById("popup-close");
+    const header = document.getElementById("popup-header");
+    if (!popup || !closeBtn || !header) return;
+
+    closeBtn.addEventListener("click", closeProjectsPopup);
+
+    let dragging = false, offX = 0, offY = 0;
+
+    header.addEventListener("mousedown", (e) => {
+      dragging = true;
+      offX = e.clientX - popup.offsetLeft;
+      offY = e.clientY - popup.offsetTop;
+      document.body.style.userSelect = "none";
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (!dragging) return;
+      popup.style.left = (e.clientX - offX) + "px";
+      popup.style.top  = (e.clientY - offY) + "px";
+    });
+
+    document.addEventListener("mouseup", () => {
+      dragging = false;
+      document.body.style.userSelect = "auto";
+    });
+  })();
+
+
+  // -----------------------------
+  // ASCII sprite helpers
+  // -----------------------------
+  let animClock = 0;
+
+  const __asciiMetricsCache = new Map();
+
+
+  function getAsciiFrame(planetId, phase = 0) {
+    const frames = asciiSprites[planetId] || ["?"];
+    const fps = 3; // plus lent = plus lisible
+    const idx = Math.floor(animClock * fps + phase) % frames.length;
+    return frames[(idx + frames.length) % frames.length];
+  }
+
+function getAsciiMetrics(spriteText, fontSizePx) {
+  const fontSize = Math.max(8, Math.min(26, Math.floor(fontSizePx)));
+  const cacheKey = fontSize + "|" + spriteText;
+  const cached = __asciiMetricsCache.get(cacheKey);
+  if (cached) return cached;
+
+  const lines = String(spriteText).split("\n");
+  const lineH = Math.floor(fontSize * 1.05);
+
+  ctx.save();
+  ctx.font = `700 ${fontSize}px monospace`;
+  let maxW = 0;
+  for (const line of lines) maxW = Math.max(maxW, ctx.measureText(line).width);
+  ctx.restore();
+
+  const totalH = lines.length * lineH;
+  const res = { w: maxW, h: totalH, fontSize, lineH };
+  __asciiMetricsCache.set(cacheKey, res);
+  return res;
+}
+
+
+  function drawAsciiSpriteCentered(x, y, spriteText, fontSizePx, color, highlight) {
+  const lines = String(spriteText).split("\n");
+  const met = getAsciiMetrics(spriteText, fontSizePx);
+
+  ctx.save();
+  ctx.font = `700 ${met.fontSize}px monospace`;
+  ctx.textBaseline = "top";
+
+  const maxW = met.w;
+  const totalH = met.h;
+
+  // No shadow / no glow: flat ASCII only
+  ctx.globalAlpha = highlight ? 1.0 : 0.95;
+  ctx.fillStyle = color;
+
+  for (let i = 0; i < lines.length; i++) {
+    const lx = x - maxW / 2;
+    const ly = y - totalH / 2 + i * met.lineH;
+    ctx.fillText(lines[i], lx, ly);
+  }
+
+  ctx.restore();
+}
+
+
+
+
+  // -----------------------------
+  // Planet halo / ring (UI)
+  // -----------------------------
+function drawPlanetBody(sx, sy, r, highlight, phase = 0) {
+  // Kept for compatibility: opaque flat disc (no gradients).
+  ctx.save();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "#06120b";
+  ctx.beginPath();
+  ctx.arc(sx, sy, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawPlanetHalo(sx, sy, r, highlight, phase = 0) {
+  // Kept for compatibility: simple rings only (no glow / no shadows).
+  const a = highlight ? 0.90 : 0.55;
+
+  ctx.save();
+  ctx.strokeStyle = "#3dff74";
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  // outer ring
+  ctx.globalAlpha = a;
+  ctx.setLineDash([]);
+  ctx.lineWidth = highlight ? 2.0 : 1.3;
+  ctx.beginPath();
+  ctx.arc(sx, sy, r, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // orbit ring (dashed) slightly inside
+  const orbitR = Math.max(10, r * 0.86);
+  ctx.globalAlpha = a * 0.75;
+  ctx.setLineDash([7, 10]);
+  ctx.lineDashOffset = -animClock * 12 - phase * 12;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(sx, sy, orbitR, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function drawPlanetSphere3D(sx, sy, r, highlight, phase = 0) {
+  // Flat, cheap "planet": opaque disc + optional clipped guide lines (no gradients, no shadows).
+  const TAU = Math.PI * 2;
+
+  ctx.save();
+  ctx.globalAlpha = 1;
+
+  // Opaque body (no see-through)
+  ctx.fillStyle = "#06120b";
+  ctx.beginPath();
+  ctx.arc(sx, sy, r, 0, TAU);
+  ctx.fill();
+
+  // Minimal surface guides (no shading)
+  if (PERF.mode !== 2 && r > 10) {
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, TAU);
+    ctx.clip();
+
+    const rot = animClock * 0.25 + phase * 0.65;
+    ctx.strokeStyle = "#3dff74";
+    ctx.lineWidth = 1;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    ctx.globalAlpha = highlight ? 0.45 : 0.28;
+
+    ctx.setLineDash([10, 14]);
+    ctx.lineDashOffset = -animClock * 8 - phase * 6;
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, r * 0.34, r * 0.92, rot, 0, TAU);
+    ctx.stroke();
+
+    ctx.setLineDash([12, 16]);
+    ctx.lineDashOffset = -animClock * 6 - phase * 5;
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, r * 0.92, r * 0.26, 0.0, 0, TAU);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+  }
+
+  // Rim
+  ctx.globalAlpha = highlight ? 1.0 : 0.80;
+  ctx.lineWidth = highlight ? 2.0 : 1.3;
+  ctx.strokeStyle = "#3dff74";
+  ctx.beginPath();
+  ctx.arc(sx, sy, r, 0, TAU);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+
+
+
+  // -----------------------------
+  // Reset
+  // -----------------------------
+  function reset() {
+    ship.x = ship.y = 0;
+    ship.vx = ship.vy = 0;
+    ship.a = 0;
+    ship.roll = 0;
+    ship.pitch = 0;
+    ship.turnInput = 0;
+    ship.uiSway = 0;
+    ship.uiSwayV = 0;
+    const startBase = -0.18;
+    ship.uiBase = startBase;
+    ship.uiBaseV = 0;
+    ship.uiBaseHold = startBase;
+    ship.prevTurnInput = 0;
+
+    shotT = 0;
+    shotLen = 0;
+    shotName = "";
+    animClock = 0;
+
+    initStars();
+    initHostiles();
+  }
+  reset();
+
+  // -----------------------------
+  // Loop
+  // -----------------------------
+  let last = performance.now();
+
+  function tick(now){
+    const dt = Math.min(0.033, (now - last) / 1000);
+    last = now;
+    update(dt);
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function update(dt){
+    perfUpdate(dt);
+    let turn = 0;
+    if (keys.has("ArrowLeft") || touchState.left)  turn -= 1;
+    if (keys.has("ArrowRight") || touchState.right) turn += 1;
+
+    ship.turnInput = turn;
+
+    ship.a += turn * ship.turnRate * dt;
+
+    const hx = Math.sin(ship.a);
+    const hz = Math.cos(ship.a);
+
+    let ax = 0, az = 0;
+    let thrusting = false;
+
+    if (keys.has("ArrowUp") || touchState.up) {
+      ax += hx * ship.thrust;
+      az += hz * ship.thrust;
+      thrusting = true;
+    }
+    if (keys.has("ArrowDown") || touchState.down) {
+      ax -= hx * ship.brake;
+      az -= hz * ship.brake;
+    }
+
+    ship.vx += ax * dt;
+    ship.vy += az * dt;
+
+    // const damping = Math.pow(0.999, dt * 60);
+    // ship.vx *= damping;
+    // ship.vy *= damping;
+
+    // moins d'inertie : damping plus fort, et encore plus fort quand tu ne pousses pas
+    const baseDamp  = Math.pow(0.999, dt * 60);               // toujours actif
+    const coastDamp = thrusting ? 1.0 : Math.pow(0.990, dt * 60); // quand pas de poussée
+    ship.vx *= baseDamp * coastDamp;
+    ship.vy *= baseDamp * coastDamp;
+
+
+    const sp = Math.hypot(ship.vx, ship.vy);
+    if (sp > ship.maxSpeed) {
+      ship.vx = ship.vx / sp * ship.maxSpeed;
+      ship.vy = ship.vy / sp * ship.maxSpeed;
+    }
+
+    ship.x += ship.vx * dt;
+    ship.y += ship.vy * dt;
+
+    const targetRoll = turn * 0.45;
+    ship.roll += (targetRoll - ship.roll) * (1 - Math.exp(-12 * dt));
+    const targetPitch = thrusting ? -0.18 : 0.0;
+    ship.pitch += (targetPitch - ship.pitch) * (1 - Math.exp(-8 * dt));
+
+    // UI sway: inertial counter-shift (turn left -> ship drifts right), spring-smoothed
+    ship.prevTurnInput ??= 0;
+    const safeDt = Math.max(1e-4, dt);
+    const dTurn = (ship.turnInput - ship.prevTurnInput) / safeDt;
+    ship.prevTurnInput = ship.turnInput;
+
+    const spNow = Math.hypot(ship.vx, ship.vy);
+    const speedN2 = Math.max(0, Math.min(1, spNow / ship.maxSpeed));
+
+    const swayTarget = -ship.turnInput; // counter-balance
+    const swayK = 24;   // stiffness
+    const swayD = 12;   // damping
+
+    ship.uiSwayV += (swayTarget - ship.uiSway) * swayK * dt;
+
+    // directional "kick" on turn engagement (adds punch)
+    const kickGain = 0.010 + 0.018 * speedN2;
+    ship.uiSwayV += (-dTurn) * kickGain;
+
+    ship.uiSwayV *= Math.exp(-swayD * dt);
+    ship.uiSway  += ship.uiSwayV * dt;
+
+    // Base shift (persistent): turning pushes the resting position to the opposite side.
+// It does NOT auto-recenter when you stop turning (so you can "finish" a turn on the other side).
+ship.uiBaseHold ??= 0;
+
+const baseSlideSpeed = 1.25 + 0.85 * speedN2; // units/s in [-1..1]
+ship.uiBaseHold = Math.max(-1, Math.min(1, ship.uiBaseHold + (-ship.turnInput) * baseSlideSpeed * dt));
+
+// Smooth follow so it feels like camera inertia rather than a hard snap.
+const baseTarget = ship.uiBaseHold;
+const baseK = 14;  // slower than sway, but responsive
+const baseD = 10;
+ship.uiBaseV += (baseTarget - ship.uiBase) * baseK * dt;
+ship.uiBaseV *= Math.exp(-baseD * dt);
+ship.uiBase  += ship.uiBaseV * dt;
+
+    for (const st of stars) {
+      const c = worldToCamera(st.wx, st.wy, st.wz);
+      if (c.z < STAR_Z_NEAR) spawnStarInFront(st);
+    }
+
+
+    // hostiles spawn + update
+    hostileSpawnT -= dt;
+    while (hostileSpawnT <= 0 && hostiles.length < HOSTILE_MAX) {
+      spawnHostile();
+      hostileSpawnT += HOSTILE_SPAWN_EVERY * rand(0.75, 1.35);
+    }
+
+    for (let i = hostiles.length - 1; i >= 0; i--) {
+      const h = hostiles[i];
+      h.t += dt;
+
+      // 3D spin
+      h.rx += h.spinX * dt;
+      h.ry += h.spinY * dt;
+      h.rz += h.spinZ * dt;
+
+h.wx += h.vx * dt;
+      h.wz += h.vz * dt;
+      h.wy += h.vy * dt;
+
+      const c = worldToCamera(h.wx, h.wy, h.wz);
+      if (c.z < 40 || c.z > HOSTILE_DESPAWN_Z) {
+        hostiles.splice(i, 1);
+      }
+    }
+
+    for (let i = explosions.length - 1; i >= 0; i--) {
+      const ex = explosions[i];
+      ex.t += dt;
+      if (ex.t >= ex.dur) explosions.splice(i, 1);
+    }
+
+    if (hudEventT > 0) hudEventT -= dt;
+
+    if (shotT > 0) {
+      shotT -= dt;
+      shotLen += LASER_SPEED * dt;
+    } else {
+      shotLen = 0;
+    }
+
+    animClock += dt;
+  }
+
+  function render(){
+    const w = innerWidth, h = innerHeight;
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, w, h);
+
+    const cx = w * 0.5, cy = h * 0.5;
+    const fProj = Math.min(w, h) * 0.55;
+
+    // speed / warp (world perspective stretch)
+    const speed = Math.hypot(ship.vx, ship.vy);
+    const speedN = Math.max(0, Math.min(1, speed / ship.maxSpeed));
+
+    const maxR = Math.max(cx, cy);
+    const invMaxR2 = 1 / (maxR * maxR);
+
+    // Radial stretch increases with speed; gives a "warp" perspective.
+    // Applied to stars/planets only (not ship/HUD).
+    const warpK = 0.22 * speedN;
+    function warpWorld(px, py) {
+      const dx = px - cx;
+      const dy = py - cy;
+      const t = (dx*dx + dy*dy) * invMaxR2;
+      const s = 1 + warpK * t;
+      return [cx + dx * s, cy + dy * s, s];
+    }
+
+    // Ship offset (screen pixels): dynamic base + inertial sway (camera-lag).
+    // uiBase shifts the resting position: sustained left turn -> base drifts to bottom-right (and vice versa).
+    const baseNeutralXPx = 0; // symmetric left/right margins (initial bias comes from uiBaseHold)
+    const baseNeutralYPx =  Math.min(160, h * 0.17);
+
+    const baseSideXPx    =  Math.min(240, w * 0.16);
+    const baseTurnDownPx =  Math.min(48,  h * 0.05);
+const baseX = baseNeutralXPx + ship.uiBase * baseSideXPx;
+    const baseY = baseNeutralYPx + Math.abs(ship.uiBase) * baseTurnDownPx;
+
+    const swayAmp = Math.min(220, w * 0.16) * (0.15 + 0.85 * speedN);
+    const rollAmp = Math.min(78, w * 0.05);
+
+    let shipShiftXPx = baseX + ship.uiSway * swayAmp - ship.roll * rollAmp;
+    let shipShiftYPx = baseY;
+
+
+
+    const shipClampX = w * 0.36;
+
+
+    shipShiftXPx = Math.max(-shipClampX, Math.min(shipClampX, shipShiftXPx));
+
+    // -----------------------------
+    // Stars
+    // -----------------------------
+    const tailBase = Math.max(0.0, Math.min(55.0, speed * 0.20));
+
+    ctx.strokeStyle = "#bff";
+    ctx.lineWidth = 1;
+    ctx.lineCap = "round";
+
+    for (const st of stars) {
+      const c = worldToCamera(st.wx, st.wy, st.wz);
+      if (c.z <= 80) { st.px = NaN; st.py = NaN; continue; }
+
+      const px0 = cx + (c.x / c.z) * fProj;
+      const py0 = cy - (c.y / c.z) * fProj;
+      const wp = warpWorld(px0, py0);
+      const px = wp[0];
+      const py = wp[1];
+
+      if (px < -80 || px > w + 80 || py < -80 || py > h + 80) {
+        st.px = px; st.py = py;
+        continue;
+      }
+      if (!Number.isFinite(st.px) || !Number.isFinite(st.py)) {
+        st.px = px; st.py = py;
+        continue;
+      }
+
+      const mvx = px - st.px;
+      const mvy = py - st.py;
+      const mv2 = mvx*mvx + mvy*mvy;
+
+      const alpha = Math.max(0.10, Math.min(0.85, 1.0 - (c.z / STAR_Z_FAR)));
+      ctx.globalAlpha = alpha;
+
+      if (PERF.enableStarTrails && mv2 > 0.25 && tailBase > 0.8) {
+        const mv = Math.sqrt(mv2);
+        const depthBoost = (1.0 - (c.z / STAR_Z_FAR));
+        const tailLen = Math.min(80.0,
+          mv * (1.0 + 0.9 * speedN) + tailBase * (0.25 + 0.9 * depthBoost)
+        );
+        const tailX = px - (mvx / mv) * tailLen;
+        const tailY = py - (mvy / mv) * tailLen;
+        const perpX = -mvy / mv;
+        const perpY =  mvx / mv;
+        const curve = (ship.turnInput * 10.0 + ship.roll * 4.0) *
+                      (0.25 + Math.min(1.0, mv * 0.06));
+
+        const midX = (tailX + px) * 0.5;
+        const midY = (tailY + py) * 0.5;
+        const ctrlX = midX + perpX * curve;
+        const ctrlY = midY + perpY * curve;
+
+        ctx.beginPath();
+        ctx.moveTo(tailX, tailY);
+        ctx.quadraticCurveTo(ctrlX, ctrlY, px, py);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = "#bff";
+        ctx.fillRect(px, py, 1, 1);
+      }
+
+      st.px = px;
+      st.py = py;
+    }
+    ctx.globalAlpha = 1;
+
+    // -----------------------------
+    // Ship projection (needed for lasers + wireframe)
+    // -----------------------------
+    const baseScale = 3;
+    const baseFShip = 520;
+    const baseZOffset = 200;
+
+    // slight "pull-back" with speed so the ship breathes a bit
+    const scale = baseScale * (1 - 0.10 * speedN);
+    const fShip  = baseFShip * (1 - 0.06 * speedN);
+    const zOffset = baseZOffset + 130 * speedN;
+
+    // ship screen offset (down-left), expressed as camera-space translation
+    const zMean = zOffset;
+    const shipCamOffX = (shipShiftXPx / fShip) * zMean;
+    const shipCamOffY = -(shipShiftYPx / fShip) * zMean;
+
+    const yaw = 0;
+    const pitch = ship.pitch;
+    const roll = -ship.roll;
+
+    const shipVerts3 = model.v.map(([x,y,z]) => {
+      let p = [x, y, z];
+      p = rotZ(p, roll);
+      p = rotX(p, pitch);
+      p = rotY(p, yaw);
+      return [p[0]*scale + shipCamOffX, p[1]*scale + shipCamOffY, p[2]*scale + zOffset];
+    });
+    const shipVerts2 = shipVerts3.map(v => project(v, fShip, cx, cy));
+
+    // -----------------------------
+    // Targets as sprites (portfolio + hostiles)
+    // -----------------------------
+    const target = acquireTarget();
+    const toDraw = [];
+
+    function pushDraw(obj, type, spriteKey, color) {
+      const c = worldToCamera(obj.wx, obj.wy || 0, obj.wz);
+      if (c.z <= 80) return;
+
+      const sx0 = cx + (c.x / c.z) * fProj;
+      const sy0 = cy - (c.y / c.z) * fProj;
+      const wpt = warpWorld(sx0, sy0);
+      const sx = wpt[0];
+      const sy = wpt[1];
+      const sr = (obj.r / c.z) * fProj * wpt[2];
+
+      if (sr < 1) return;
+      if (sx < -sr - 220 || sx > w + sr + 220 || sy < -sr - 220 || sy > h + sr + 220) return;
+
+      toDraw.push({ type, obj, spriteKey, color, c, sx, sy, sr });
+    }
+
+    for (const p of planets) pushDraw(p, "planet", p.id, "#3dff74");
+    for (const hObj of hostiles) {
+      // Asteroids: blue wireframe
+      pushDraw(hObj, "hostile", hObj.kind, "#3da5ff");
+    }
+
+    toDraw.sort((a, b) => b.c.z - a.c.z);
+
+    function drawAsteroidWireframe(it, isTarget, phase) {
+      const hObj = it.obj;
+      const mesh = ASTEROID_MESHES[(hObj.meshId | 0) % ASTEROID_MESHES.length];
+      if (!mesh) return;
+
+      const pts = new Array(mesh.v.length);
+
+      const rx = hObj.rx || 0;
+      const ry = hObj.ry || 0;
+      const rz = hObj.rz || 0;
+      const R  = hObj.r;
+
+      for (let vi = 0; vi < mesh.v.length; vi++) {
+        // local vertex -> rotate -> scale -> translate to camera space
+        let p = mesh.v[vi];
+        p = rotX(p, rx);
+        p = rotY(p, ry);
+        p = rotZ(p, rz);
+
+        const vx = it.c.x + p[0] * R;
+        const vy = it.c.y + p[1] * R;
+        const vz = it.c.z + p[2] * R;
+
+        if (vz <= 80) { pts[vi] = null; continue; }
+
+        const px0 = cx + (vx / vz) * fProj;
+        const py0 = cy - (vy / vz) * fProj;
+        const wpv = warpWorld(px0, py0);
+        pts[vi] = [wpv[0], wpv[1]];
+      }
+
+      ctx.save();
+      ctx.strokeStyle = isTarget ? "#ffffff" : it.color;
+      ctx.lineWidth = isTarget ? 2 : 1;
+      ctx.globalAlpha = isTarget ? 0.98 : 0.90;
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      for (let ei = 0; ei < mesh.e.length; ei++) {
+        const a = pts[mesh.e[ei][0]];
+        const b = pts[mesh.e[ei][1]];
+        if (!a || !b) continue;
+        ctx.beginPath();
+        ctx.moveTo(a[0], a[1]);
+        ctx.lineTo(b[0], b[1]);
+        ctx.stroke();
+      }
+
+      // target brackets (no rings)
+      if (isTarget) {
+        const r = Math.max(18, it.sr * 0.92);
+        const k = Math.max(8, r * 0.22);
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.98;
+
+        ctx.beginPath();
+        // TL
+        ctx.moveTo(it.sx - r, it.sy - r + k);
+        ctx.lineTo(it.sx - r, it.sy - r);
+        ctx.lineTo(it.sx - r + k, it.sy - r);
+        // TR
+        ctx.moveTo(it.sx + r - k, it.sy - r);
+        ctx.lineTo(it.sx + r, it.sy - r);
+        ctx.lineTo(it.sx + r, it.sy - r + k);
+        // BR
+        ctx.moveTo(it.sx + r, it.sy + r - k);
+        ctx.lineTo(it.sx + r, it.sy + r);
+        ctx.lineTo(it.sx + r - k, it.sy + r);
+        // BL
+        ctx.moveTo(it.sx - r + k, it.sy + r);
+        ctx.lineTo(it.sx - r, it.sy + r);
+        ctx.lineTo(it.sx - r, it.sy + r - k);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+
+
+
+    for (let i = 0; i < toDraw.length; i++) {
+      const it = toDraw[i];
+      const isTarget = target && it.type === target.type && it.obj === target.obj;
+
+      // Hostiles: 3D wireframe objects (no halos/rings).
+      if (it.type === "hostile" && it.obj.kind === "asteroid") {
+        drawAsteroidWireframe(it, isTarget, i * 0.7);
+
+        if (isTarget) {
+          const label = it.obj.name;
+          ctx.fillStyle = "#fff";
+          ctx.font = "12px monospace";
+          ctx.textBaseline = "alphabetic";
+          ctx.fillText(label, it.sx - (label.length * 3), it.sy - Math.max(16, it.sr) - 10);
+        }
+        continue;
+      }
+
+      // Planets: opaque 3D sphere around the ASCII (no see-through)
+      const fontSize = Math.max(8, Math.min(18, it.sr * 0.10));
+      const frame = getAsciiFrame(it.spriteKey, i * 0.7);
+      const met = getAsciiMetrics(frame, fontSize);
+      const pad = Math.max(12, met.fontSize * 0.9);
+      const ringR = 0.5 * Math.hypot(met.w, met.h) + pad;
+
+      drawPlanetSphere3D(it.sx, it.sy, ringR, isTarget, i * 0.7);
+      drawAsciiSpriteCentered(it.sx, it.sy, frame, fontSize, it.color, isTarget);
+
+      if (isTarget) {
+        const label = it.obj.name;
+        ctx.fillStyle = "#fff";
+        ctx.font = "12px monospace";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillText(label, it.sx - (label.length * 3), it.sy - ringR - 10);
+      }
+    }
+
+    // explosions (simple shockwave + debris streaks)
+    for (const ex of explosions) {
+      const c = worldToCamera(ex.wx, ex.wy || 0, ex.wz);
+      if (c.z <= 80) continue;
+
+      const px0 = cx + (c.x / c.z) * fProj;
+      const py0 = cy - (c.y / c.z) * fProj;
+      const wp = warpWorld(px0, py0);
+      const px = wp[0];
+      const py = wp[1];
+      const ws = wp[2];
+
+      const t = Math.max(0, Math.min(1, ex.t / ex.dur));
+      const a = 1 - t;
+      const r = (18 + 150 * t) * ws * (0.85 + 0.25 * ex.strength);
+
+      ctx.save();
+      ctx.globalAlpha = 0.95 * a;
+      ctx.strokeStyle = "#bff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(px, py, r, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.globalAlpha = 0.55 * a;
+      ctx.strokeStyle = "#fff";
+      for (let k = 0; k < 10; k++) {
+        const ang = (k / 10) * Math.PI * 2 + ex.strength * 0.2;
+        const len = (10 + 45 * (1 - t)) * ws;
+        ctx.beginPath();
+        ctx.moveTo(px + Math.cos(ang) * (r * 0.35), py + Math.sin(ang) * (r * 0.35));
+        ctx.lineTo(px + Math.cos(ang) * (r * 0.35 + len), py + Math.sin(ang) * (r * 0.35 + len));
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // -----------------------------
+    // Laser
+    // -----------------------------
+    if (shotT > 0) {
+      const aShot = Math.max(0, Math.min(1, shotT / SHOT_DURATION));
+
+      const ix = Number.isFinite(shotAimX) ? shotAimX : cx;
+      const iy = Number.isFinite(shotAimY) ? shotAimY : cy;
+
+      const gunL = shipVerts2[1];
+      const gunR = shipVerts2[2];
+
+      function drawConeBeam(ox, oy, tx, ty) {
+        // No glow / no cone: simple beam line only
+        let dx = tx - ox;
+        let dy = ty - oy;
+        const L = Math.hypot(dx, dy);
+        if (L < 1) return;
+
+        dx /= L; dy /= L;
+
+        const endLen = Math.min(shotLen, L);
+        const ex = ox + dx * endLen;
+        const ey = oy + dy * endLen;
+
+        ctx.strokeStyle = `rgba(255,255,255,${0.85 * aShot})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(ox, oy);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+      }
+
+      drawConeBeam(gunL[0], gunL[1], ix, iy);
+      drawConeBeam(gunR[0], gunR[1], ix, iy);
+    }
+
+// -----------------------------
+    // Ship wireframe
+    // -----------------------------
+    ctx.strokeStyle = "#9ff";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (const [i,j] of model.e) {
+      const a2 = shipVerts2[i];
+      const b2 = shipVerts2[j];
+      ctx.moveTo(a2[0], a2[1]);
+      ctx.lineTo(b2[0], b2[1]);
+    }
+    ctx.stroke();
+
+    // -----------------------------
+    // Indicator under ship when target is in sight
+    // -----------------------------
+    if (target) {
+      const msg = "PRESS SPACE TO SHOOT";
+
+      ctx.save();
+      ctx.font = "700 12px monospace";
+      ctx.textBaseline = "top";
+
+      const textW = ctx.measureText(msg).width;
+      const shipUIX = cx + shipShiftXPx;
+      const shipUIY = cy + shipShiftYPx;
+
+      const x = shipUIX - textW / 2;
+      const y = shipUIY + Math.max(44, h * 0.06);
+
+      ctx.globalAlpha = 1.0;
+      ctx.fillStyle = "#3dff74";
+      ctx.fillText(msg, x, y);
+
+      ctx.restore();
+    }
+
+    // -----------------------------
+    // Crosshair
+    // -----------------------------
+    ctx.strokeStyle = "#9ff";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 8, cy); ctx.lineTo(cx - 2, cy);
+    ctx.moveTo(cx + 2, cy); ctx.lineTo(cx + 8, cy);
+    ctx.moveTo(cx, cy - 8); ctx.lineTo(cx, cy - 2);
+    ctx.moveTo(cx, cy + 2); ctx.lineTo(cx, cy + 8);
+    ctx.stroke();
+
+    // -----------------------------
+    // HUD
+    // -----------------------------
+    ctx.fillStyle = "#3dff74";
+    ctx.font = "12px monospace";
+    const sp = Math.hypot(ship.vx, ship.vy);
+    const tname = target ? (target.type === "planet" ? target.obj.name : target.obj.name) : "-";
+    ctx.fillText(`SPD ${sp.toFixed(1)}  SCORE ${score}  KILLS ${kills}  TARGET ${tname}  [SPACEBAR]=SHOOT`, 12, h - 14);
+
+    if (hudEventT > 0 && hudEventMsg) {
+      ctx.fillStyle = "#fff";
+      ctx.fillText(hudEventMsg, 12, h - 30);
+    } else if (shotName) {
+      ctx.fillStyle = "#fff";
+      ctx.fillText(`OPEN: ${shotName}`, 12, h - 30);
+    }
+  }
+
+
+  requestAnimationFrame(tick);
+})();
+</script>
+
+
+</body>
+</html>
