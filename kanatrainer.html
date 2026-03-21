@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>かな Trainer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#080b12;--surface:#0e1219;--surface2:#141922;--surface3:#1b2130;
+      --text:#eceef5;--text2:#9099b4;--text3:#5a6480;
+      --teal:#3de8c8;--teal-dim:rgba(61,232,200,0.12);--teal-glow:rgba(61,232,200,0.25);
+      --violet:#b48efa;--violet-dim:rgba(180,142,250,0.12);
+      --coral:#ff7f6b;--coral-dim:rgba(255,127,107,0.12);
+      --gold:#f5c842;--green:#52e88c;--red:#ff5f5f;
+      --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);
+      --r:16px;--r-lg:24px;--r-xl:32px;
+      --bnav-h:68px;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html{scroll-behavior:smooth;}
+    body{font-family:'Outfit',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+
+    /* grain */
+    body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:1000;opacity:.4;}
+
+    /* orbs */
+    .orbs{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+    .orb{position:absolute;border-radius:50%;filter:blur(80px);}
+    .o1{width:600px;height:600px;background:var(--teal);top:-200px;left:-150px;opacity:.05;}
+    .o2{width:500px;height:500px;background:var(--violet);bottom:-100px;right:-100px;opacity:.055;}
+    .o3{width:300px;height:300px;background:var(--coral);top:40%;left:50%;transform:translate(-50%,-50%);opacity:.04;}
+
+    .app{max-width:660px;margin:0 auto;padding:0 16px;padding-bottom:calc(var(--bnav-h) + 20px + env(safe-area-inset-bottom));position:relative;z-index:1;}
+
+    /* ── TOPBAR ── */
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 0 0;margin-bottom:16px;}
+    .brand{display:flex;align-items:center;gap:12px;}
+    .logo{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,var(--teal),var(--violet));display:grid;place-items:center;font-family:'Noto Serif JP',serif;font-size:1.15rem;color:#080b12;font-weight:700;box-shadow:0 0 22px var(--teal-glow);flex-shrink:0;}
+    .brand-name{font-weight:700;font-size:1.05rem;letter-spacing:-.02em;background:linear-gradient(90deg,var(--teal),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .brand-sub{font-size:.7rem;color:var(--text3);margin-top:1px;}
+
+    .desktop-nav{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:4px;}
+    .dnav-btn{border:none;background:transparent;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.8rem;font-weight:500;padding:7px 13px;border-radius:999px;cursor:pointer;transition:all .18s;white-space:nowrap;}
+    .dnav-btn:hover{color:var(--text);}
+    .dnav-btn.active{background:var(--surface3);color:var(--teal);font-weight:600;}
+
+    /* ── BOTTOM NAV ── */
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;height:calc(var(--bnav-h) + env(safe-area-inset-bottom));background:rgba(8,11,18,.96);backdrop-filter:blur(28px) saturate(2);border-top:1px solid var(--border2);display:none;align-items:flex-start;justify-content:space-around;padding-top:10px;padding-bottom:env(safe-area-inset-bottom);z-index:500;}
+    .bnav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 10px 8px;border:none;background:transparent;color:var(--text3);font-family:'Outfit',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:color .2s;border-radius:12px;min-width:44px;position:relative;}
+    .bnav-btn .bi{font-size:1.3rem;line-height:1;transition:transform .25s cubic-bezier(.34,1.56,.64,1);}
+    .bnav-btn.active{color:var(--teal);}
+    .bnav-btn.active .bi{transform:scale(1.2) translateY(-1px);}
+    .bnav-btn::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--teal);opacity:0;transition:opacity .2s;}
+    .bnav-btn.active::after{opacity:1;}
+
+    /* ── SECTIONS ── */
+    .section{display:none;}
+    .section.active{display:block;animation:fadeSlide .22s ease;}
+    @keyframes fadeSlide{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+    /* ── CARD ── */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;}
+
+    /* ── TYPOGRAPHY ── */
+    h2{font-size:1.1rem;font-weight:700;letter-spacing:-.02em;}
+    h3{font-size:.95rem;font-weight:600;}
+    .label{font-size:.68rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);}
+
+    /* ── BUTTONS ── */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:var(--r);padding:12px 20px;font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer;transition:all .18s cubic-bezier(.4,0,.2,1);background:var(--surface2);color:var(--text);position:relative;overflow:hidden;-webkit-user-select:none;user-select:none;}
+    .btn::after{content:'';position:absolute;inset:0;background:#fff;opacity:0;transition:opacity .15s;}
+    .btn:active::after{opacity:.06;}
+    .btn:active{transform:scale(.97);}
+    .btn-teal{background:linear-gradient(135deg,var(--teal),#1ecfb0);color:#030d0b;box-shadow:0 4px 18px rgba(61,232,200,.28);}
+    .btn-teal:hover{box-shadow:0 6px 24px rgba(61,232,200,.42);filter:brightness(1.05);}
+    .btn-violet{background:linear-gradient(135deg,var(--violet),#8b5cf6);color:#0d0718;box-shadow:0 4px 18px rgba(180,142,250,.28);}
+    .btn-coral{background:linear-gradient(135deg,var(--coral),#e05a45);color:#1a0500;box-shadow:0 4px 18px rgba(255,127,107,.28);}
+    .btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2);}
+    .btn-ghost:hover{border-color:rgba(255,255,255,.18);color:var(--text);}
+    .btn-sm{padding:8px 14px;font-size:.78rem;border-radius:10px;}
+    .btn-lg{padding:16px 28px;font-size:.95rem;border-radius:var(--r-lg);}
+    .btn-full{width:100%;}
+
+    /* ── HOME ── */
+    .home-hero{text-align:center;padding:28px 0 18px;position:relative;}
+    .hero-orb-ring{
+      position:absolute;top:50%;left:50%;transform:translate(-50%,-60%);
+      width:clamp(160px,45vw,220px);height:clamp(160px,45vw,220px);
+      border-radius:50%;
+      background:conic-gradient(from 0deg,var(--teal),var(--violet),var(--coral),var(--teal));
+      filter:blur(32px);opacity:.12;
+      animation:spinRing 8s linear infinite;
+      pointer-events:none;
+    }
+    @keyframes spinRing{to{transform:translate(-50%,-60%) rotate(360deg);}}
+    .hero-kana{font-family:'Noto Serif JP',serif;font-size:clamp(3.5rem,16vw,5.5rem);line-height:1;background:linear-gradient(145deg,var(--text) 0%,var(--teal) 50%,var(--violet) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:block;animation:float 4s ease-in-out infinite;margin-bottom:10px;position:relative;}
+    @keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-7px);}}
+    .hero-title{font-size:1.5rem;font-weight:800;letter-spacing:-.04em;margin-bottom:4px;}
+    .hero-sub{color:var(--text2);font-size:.82rem;display:flex;align-items:center;justify-content:center;gap:8px;}
+    .hero-sub::before,.hero-sub::after{content:'';display:inline-block;width:20px;height:1px;background:var(--border2);}
+
+    .stats-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:16px 0;}
+    .stat-pill{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 8px;text-align:center;transition:border-color .2s;}
+    .stat-pill:hover{border-color:var(--border2);}
+    .stat-pill .sv{font-size:1.5rem;font-weight:800;line-height:1;margin-top:4px;letter-spacing:-.03em;}
+    .stat-pill .sl{font-size:.58rem;color:var(--text3);font-weight:600;letter-spacing:.07em;text-transform:uppercase;}
+    .c-teal .sv{color:var(--teal);}.c-violet .sv{color:var(--violet);}.c-gold .sv{color:var(--gold);}.c-red .sv{color:var(--red);}
+
+    .tiles-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+    .tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px 18px;cursor:pointer;transition:all .22s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden;display:flex;flex-direction:column;gap:5px;-webkit-user-select:none;user-select:none;}
+    .tile::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--tc,var(--teal));transform:scaleX(0);transition:transform .28s cubic-bezier(.4,0,.2,1);transform-origin:left;}
+    .tile::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 0% 0%,var(--tc-dim,rgba(61,232,200,.08)),transparent 60%);opacity:0;transition:opacity .28s;}
+    .tile:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.12);box-shadow:0 12px 32px rgba(0,0,0,.3);}
+    .tile:hover::before{transform:scaleX(1);}
+    .tile:hover::after{opacity:1;}
+    .tile:active{transform:scale(.97);}
+    .tile-icon{font-size:1.6rem;line-height:1;margin-bottom:4px;font-family:'Noto Serif JP',serif;}
+    .tile-title{font-weight:700;font-size:.92rem;}
+    .tile-desc{font-size:.72rem;color:var(--text2);line-height:1.45;}
+    .tile-cta{margin-top:auto;padding-top:12px;font-size:.74rem;font-weight:700;letter-spacing:.03em;color:var(--tc,var(--teal));display:flex;align-items:center;gap:4px;}
+    .tile-cta::after{content:'→';transition:transform .18s;}
+    .tile:hover .tile-cta::after{transform:translateX(3px);}
+    .t-teal{--tc:var(--teal);--tc-dim:rgba(61,232,200,.08);}
+    .t-violet{--tc:var(--violet);--tc-dim:rgba(180,142,250,.08);}
+    .t-coral{--tc:var(--coral);--tc-dim:rgba(255,127,107,.08);}
+    .t-gold{--tc:var(--gold);--tc-dim:rgba(245,200,66,.08);}
+
+    .quick-strip{display:flex;flex-direction:column;gap:8px;}
+    .quick-btn{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;cursor:pointer;transition:all .2s cubic-bezier(.4,0,.2,1);font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:600;color:var(--text);position:relative;overflow:hidden;}
+    .quick-btn::after{content:'';position:absolute;inset:0;background:#fff;opacity:0;transition:opacity .15s;}
+    .quick-btn:hover{border-color:var(--border2);transform:translateX(4px);box-shadow:4px 0 0 0 var(--qc,var(--teal)) inset;}
+    .quick-btn:active::after{opacity:.04;}
+    .quick-btn:active{transform:scale(.98);}
+    .qicon{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-family:'Noto Serif JP',serif;font-size:1.1rem;flex-shrink:0;transition:transform .2s;}
+    .quick-btn:hover .qicon{transform:scale(1.12) rotate(-3deg);}
+    .qi-teal{background:var(--teal-dim);color:var(--teal);--qc:var(--teal);}
+    .qi-violet{background:var(--violet-dim);color:var(--violet);--qc:var(--violet);}
+    .qi-coral{background:var(--coral-dim);color:var(--coral);--qc:var(--coral);}
+    .qarrow{margin-left:auto;color:var(--text3);font-size:.85rem;transition:transform .2s;}
+    .quick-btn:hover .qarrow{transform:translateX(3px);color:var(--text2);}
+
+    /* ── SECTION HEADER ── */
+    .sec-hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:22px 0 14px;flex-wrap:wrap;}
+    .sec-hdr-left{display:flex;align-items:center;gap:10px;}
+
+    /* ── FILTER ── */
+    .filter-bar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
+    .filter-bar::-webkit-scrollbar{display:none;}
+    .fpill{flex-shrink:0;border:1px solid var(--border);border-radius:999px;padding:6px 13px;font-family:'Outfit',sans-serif;font-size:.76rem;font-weight:600;cursor:pointer;background:var(--surface2);color:var(--text2);transition:all .18s;}
+    .fpill:hover{color:var(--text);}
+    .fpill.active{background:var(--teal-dim);color:var(--teal);border-color:rgba(61,232,200,.3);}
+
+    /* ── BADGE ── */
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:.7rem;font-weight:700;background:var(--teal-dim);color:var(--teal);border:1px solid rgba(61,232,200,.2);}
+    .badge-v{background:var(--violet-dim);color:var(--violet);border-color:rgba(180,142,250,.2);}
+
+    /* ── KANA GRID ── */
+    .kana-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:8px;}
+    .kana-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 6px 10px;text-align:center;cursor:pointer;transition:all .22s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;align-items:center;gap:4px;-webkit-user-select:none;user-select:none;position:relative;overflow:hidden;}
+    .kana-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--kc-color,transparent);transition:opacity .2s;opacity:0;}
+    .kana-card.mhi::after{opacity:1;background:var(--green);}
+    .kana-card.mmid::after{opacity:1;background:var(--gold);}
+    .kana-card.mlo::after{opacity:1;background:var(--red);}
+    .kana-card:hover{border-color:rgba(61,232,200,.3);background:var(--surface2);transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,.3);}
+    .kana-card:active{transform:scale(.94);}
+    .kg{font-family:'Noto Serif JP',serif;font-size:1.7rem;line-height:1.1;}
+    .kr{font-size:.68rem;color:var(--text2);font-weight:500;}
+    .kdot{width:5px;height:5px;border-radius:50%;}
+    .d0{background:var(--text3);}.dlo{background:var(--red);}.dmid{background:var(--gold);}.dhi{background:var(--green);}
+
+    /* ── DETAIL ── */
+    .detail-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:32px 20px 24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);margin-bottom:12px;position:relative;overflow:hidden;}
+    .detail-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,var(--teal-dim),transparent 60%);pointer-events:none;}
+    .det-sym{font-family:'Noto Serif JP',serif;font-size:clamp(4rem,18vw,7rem);line-height:1;background:linear-gradient(135deg,var(--text),var(--text2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px;}
+    .det-tags{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:16px;}
+    .det-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;width:100%;}
+    .dstat{background:var(--surface2);border-radius:var(--r);padding:12px 6px;text-align:center;}
+    .dstat .dv{font-size:1.25rem;font-weight:800;letter-spacing:-.02em;margin-top:4px;}
+    .dstat .dl{font-size:.6rem;color:var(--text3);font-weight:600;letter-spacing:.06em;text-transform:uppercase;}
+
+    /* ── QUIZ CONFIG ── */
+    .quiz-cfg{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);padding:22px;margin-bottom:12px;}
+    .cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0;}
+    .field{display:grid;gap:5px;}
+    .flabel{font-size:.68rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);}
+    select,input[type="number"]{background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:11px 14px;border-radius:var(--r);font-family:'Outfit',sans-serif;font-size:.86rem;font-weight:500;appearance:none;width:100%;transition:border-color .18s;}
+    select:focus,input:focus{outline:none;border-color:rgba(61,232,200,.4);}
+
+    /* ── QUIZ PLAY ── */
+    .quiz-play{max-width:520px;margin:0 auto;}
+    .quiz-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+    .quiz-ctr{font-size:.78rem;font-weight:600;color:var(--text2);}
+    .score-pill{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(61,232,200,.2);border-radius:999px;padding:5px 14px;font-size:.78rem;font-weight:700;transition:transform .2s;}
+    .score-pill.bump{animation:scoreBump .3s ease;}
+    @keyframes scoreBump{0%,100%{transform:scale(1);}50%{transform:scale(1.2);}}
+    .prog-track{height:5px;background:var(--surface2);border-radius:999px;overflow:hidden;margin-bottom:16px;}
+    .prog-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--teal),var(--violet));transition:width .45s cubic-bezier(.4,0,.2,1);box-shadow:0 0 10px var(--teal-glow);}
+    .streak-row{display:flex;justify-content:center;gap:5px;min-height:12px;margin-bottom:10px;}
+    .sdot{width:7px;height:7px;border-radius:50%;background:var(--surface3);transition:background .2s,transform .25s;}
+    .sdot.ok{background:var(--green);transform:scale(1.25);}
+    .sdot.ko{background:var(--red);}
+
+    /* Question card */
+    .quiz-q-card{
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:var(--r-xl);
+      padding:28px 20px 20px;
+      text-align:center;
+      margin-bottom:14px;
+      position:relative;
+      overflow:hidden;
+      transition:border-color .3s;
+    }
+    .quiz-q-card::before{
+      content:'';position:absolute;inset:0;
+      background:radial-gradient(ellipse at 50% 0%,rgba(61,232,200,.06),transparent 55%);
+      pointer-events:none;
+    }
+    .quiz-q-card.state-ok{border-color:rgba(82,232,140,.4);}
+    .quiz-q-card.state-ko{border-color:rgba(255,95,95,.3);}
+    .quiz-lbl{font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;}
+    .quiz-q{font-family:'Noto Serif JP',serif;font-size:clamp(4.5rem,20vw,7.5rem);line-height:1;background:linear-gradient(145deg,var(--text) 20%,var(--text2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .quiz-q.rq{font-family:'Outfit',sans-serif;font-size:clamp(2.2rem,11vw,4rem);font-weight:800;letter-spacing:-.05em;}
+
+    .ans-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+    .ans-btn{
+      padding:20px 12px;
+      border-radius:var(--r-lg);
+      border:2px solid var(--border);
+      background:var(--surface);
+      color:var(--text);
+      font-family:'Noto Serif JP',serif;
+      font-size:1.3rem;
+      font-weight:700;
+      cursor:pointer;
+      transition:all .15s cubic-bezier(.4,0,.2,1);
+      line-height:1.2;
+      -webkit-user-select:none;user-select:none;
+      position:relative;
+      overflow:hidden;
+    }
+    .ans-btn::after{content:'';position:absolute;inset:0;background:#fff;opacity:0;transition:opacity .1s;}
+    .ans-btn:active::after{opacity:.04;}
+    .ans-btn.ra{font-family:'Outfit',sans-serif;font-size:1rem;font-weight:700;}
+    .ans-btn:hover:not(:disabled){
+      border-color:rgba(61,232,200,.4);
+      background:var(--surface2);
+      transform:translateY(-3px);
+      box-shadow:0 8px 24px rgba(0,0,0,.35);
+    }
+    .ans-btn:active:not(:disabled){transform:scale(.97);}
+    .ans-btn.correct{background:rgba(82,232,140,.14);border-color:var(--green);color:var(--green);animation:bumpUp .38s ease;}
+    .ans-btn.wrong{background:rgba(255,95,95,.14);border-color:var(--red);color:var(--red);animation:shake .42s ease;}
+    .ans-btn.reveal{background:rgba(82,232,140,.07);border-color:rgba(82,232,140,.35);color:var(--green);}
+    @keyframes bumpUp{0%,100%{transform:translateY(0) scale(1);}35%{transform:translateY(-5px) scale(1.04);}}
+    @keyframes shake{0%,100%{transform:translateX(0);}22%{transform:translateX(-8px);}44%{transform:translateX(8px);}66%{transform:translateX(-5px);}88%{transform:translateX(5px);}}
+
+    .typing-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:10px;}
+    .typing-input{width:100%;max-width:300px;text-align:center;font-family:'Outfit',sans-serif;font-size:1.6rem;font-weight:700;padding:18px 20px;border-radius:var(--r-lg);background:var(--surface);border:2px solid var(--border2);color:var(--text);caret-color:var(--teal);letter-spacing:.04em;transition:border-color .2s,box-shadow .2s;}
+    .typing-input::placeholder{color:var(--text3);font-size:.88rem;font-weight:400;letter-spacing:0;}
+    .typing-input:focus{outline:none;border-color:rgba(61,232,200,.55);box-shadow:0 0 0 4px rgba(61,232,200,.1);}
+    .typing-input.tok{border-color:var(--green);box-shadow:0 0 0 4px rgba(82,232,140,.12);animation:bumpUp .35s ease;}
+    .typing-input.tko{border-color:var(--red);box-shadow:0 0 0 4px rgba(255,95,95,.12);animation:shake .4s ease;}
+    .typing-hint{font-size:.72rem;color:var(--text3);display:flex;align-items:center;gap:6px;}
+    .typing-hint kbd{background:var(--surface3);border:1px solid var(--border2);border-radius:6px;padding:2px 8px;font-size:.68rem;font-family:monospace;color:var(--text2);}
+
+    .fb{text-align:center;padding:12px 16px;border-radius:var(--r);font-weight:700;font-size:.88rem;opacity:0;transform:translateY(6px);transition:opacity .2s,transform .2s;pointer-events:none;}
+    .fb.show{opacity:1;transform:translateY(0);}
+    .fb.ok{background:rgba(82,232,140,.1);border:1px solid rgba(82,232,140,.25);color:var(--green);}
+    .fb.ko{background:rgba(255,95,95,.1);border:1px solid rgba(255,95,95,.25);color:var(--red);}
+
+    /* ── RESULT ── */
+    .result-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);padding:36px 24px;text-align:center;max-width:480px;margin:0 auto;position:relative;overflow:hidden;}
+    .result-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(61,232,200,.08),transparent 55%);pointer-events:none;}
+    .res-emoji{font-size:3.8rem;display:block;margin-bottom:12px;animation:popIn .5s cubic-bezier(.34,1.56,.64,1);}
+    @keyframes popIn{from{transform:scale(0) rotate(-20deg);}to{transform:scale(1) rotate(0deg);}}
+    .res-title{font-size:1.4rem;font-weight:800;margin-bottom:6px;letter-spacing:-.02em;}
+    .res-sub{color:var(--text2);font-size:.82rem;margin-bottom:24px;}
+    .res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px;}
+    .rstat{background:var(--surface2);border-radius:var(--r);padding:16px 8px;border:1px solid var(--border);}
+    .rstat .rv{font-size:1.8rem;font-weight:800;letter-spacing:-.03em;margin-top:4px;}
+    .rstat .rl{font-size:.6rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-weight:600;}
+    .res-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+
+    /* ── REVIEW ── */
+    .rv-list{display:grid;gap:8px;}
+    .rv-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);transition:border-color .18s;}
+    .rv-row:hover{border-color:var(--border2);}
+    .rv-left{display:flex;align-items:center;gap:12px;}
+    .rv-glyph{width:46px;height:46px;background:var(--surface2);border-radius:12px;display:grid;place-items:center;font-family:'Noto Serif JP',serif;font-size:1.45rem;flex-shrink:0;}
+    .rv-top{font-weight:600;font-size:.88rem;}
+    .rv-sub{font-size:.7rem;color:var(--text2);margin:2px 0 5px;}
+    .mbar-wrap{display:flex;align-items:center;gap:8px;}
+    .mbar{width:68px;height:4px;background:var(--surface3);border-radius:999px;overflow:hidden;}
+    .mbar-fill{height:100%;border-radius:999px;transition:width .6s ease;}
+    .mbar-pct{font-size:.68rem;font-weight:700;}
+
+    /* ── STATS ── */
+    .stats-big{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;}
+    .sblock{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;}
+    .sblock .sbv{font-size:1.9rem;font-weight:800;letter-spacing:-.03em;margin-top:6px;}
+    .sblock .sbl{font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;font-weight:600;color:var(--text3);}
+
+    /* ── SETTINGS ── */
+    .settings-group{display:grid;gap:10px;}
+    .sw-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 15px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);}
+    .sw-title{font-size:.86rem;font-weight:600;}
+    .sw-sub{font-size:.7rem;color:var(--text3);margin-top:2px;}
+    .toggle-label{display:flex;align-items:center;gap:8px;cursor:pointer;padding:0;background:none;border:none;}
+    .mbadge{padding:4px 10px;border-radius:999px;font-size:.68rem;font-weight:700;background:var(--teal-dim);color:var(--teal);border:1px solid rgba(61,232,200,.25);}
+    .mbadge.off{background:rgba(255,95,95,.1);color:var(--red);border-color:rgba(255,95,95,.2);}
+
+    /* ── DIVIDER ── */
+    .divider{height:1px;background:var(--border);margin:14px 0;}
+
+    /* ── TOAST ── */
+    #toast{position:fixed;bottom:calc(var(--bnav-h) + 14px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(10px);background:var(--surface3);border:1px solid var(--border2);border-radius:999px;padding:10px 20px;font-size:.8rem;font-weight:600;opacity:0;pointer-events:none;transition:all .28s cubic-bezier(.4,0,.2,1);z-index:900;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis;}
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+    /* ── CONFETTI ── */
+    .cp{position:fixed;pointer-events:none;z-index:9999;border-radius:3px;animation:cpFall linear forwards;}
+    @keyframes cpFall{0%{opacity:1;transform:translateY(-20px) rotate(0deg);}100%{opacity:0;transform:translateY(110vh) rotate(720deg);}}
+
+    .foot{text-align:center;color:var(--text3);font-size:.7rem;padding:18px 0 8px;}
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:640px){
+      .desktop-nav{display:none!important;}
+      .bottom-nav{display:flex!important;}
+      :root{--bnav-h:64px;}
+
+      /* Bigger touch targets */
+      .ans-btn{padding:22px 12px;font-size:1.35rem;}
+      .ans-btn.ra{font-size:1.05rem;}
+      .quick-btn{padding:16px;}
+      .fpill{padding:8px 16px;font-size:.8rem;}
+      .btn-lg{padding:18px 24px;}
+
+      /* Stats */
+      .stats-strip{grid-template-columns:repeat(2,1fr);}
+      .stat-pill .sv{font-size:1.6rem;}
+
+      /* Config full width */
+      .cfg-grid{grid-template-columns:1fr;}
+      .det-stats{grid-template-columns:repeat(2,1fr);}
+      .res-grid{grid-template-columns:1fr;}
+      .stats-big{grid-template-columns:1fr 1fr;}
+
+      /* Quiz immersive on mobile */
+      .quiz-q-card{border-radius:var(--r-lg);padding:32px 16px 24px;}
+      .quiz-q{font-size:clamp(4.5rem,22vw,7rem);}
+      .quiz-q.rq{font-size:clamp(2.2rem,12vw,3.5rem);}
+      .quiz-play{max-width:100%;}
+
+      /* Kana grid tighter */
+      .kana-grid{grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:7px;}
+      .kg{font-size:1.55rem;}
+
+      /* Section header stacks */
+      .sec-hdr{gap:8px;}
+    }
+
+    @media(max-width:400px){
+      .tiles-grid{grid-template-columns:1fr 1fr;}
+      .ans-btn{padding:18px 8px;font-size:1.2rem;}
+      .hero-kana{font-size:clamp(3rem,18vw,5rem);}
+    }
+
+    @media(max-width:340px){
+      .tiles-grid{grid-template-columns:1fr;}
+      .bottom-nav{justify-content:space-evenly;}
+      .bnav-btn{min-width:36px;font-size:.5rem;}
+    }
+
+    /* ── LANDSCAPE MOBILE ── */
+    @media(max-height:500px) and (orientation:landscape){
+      .home-hero{padding:10px 0 8px;}
+      .hero-kana{font-size:2.5rem;}
+      .quiz-q-card{padding:16px;}
+      .quiz-q{font-size:clamp(3rem,14vw,5rem);}
+      .ans-btn{padding:14px 10px;}
+    }
+  </style>
+</head>
+<body>
+<div class="orbs"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
+
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">か</div>
+      <div>
+        <div class="brand-name">Kana Trainer</div>
+        <div class="brand-sub">Hiragana · Katakana</div>
+      </div>
+    </div>
+    <nav class="desktop-nav">
+      <button class="dnav-btn active" data-target="home">Accueil</button>
+      <button class="dnav-btn" data-target="hiragana">Hiragana</button>
+      <button class="dnav-btn" data-target="katakana">Katakana</button>
+      <button class="dnav-btn" data-target="quiz">Quiz</button>
+      <button class="dnav-btn" data-target="review">Révision</button>
+      <button class="dnav-btn" data-target="stats">Stats</button>
+      <button class="dnav-btn" data-target="settings">Réglages</button>
+    </nav>
+  </div>
+
+  <!-- HOME -->
+  <section id="home" class="section active">
+    <div class="home-hero">
+      <div class="hero-orb-ring"></div>
+      <span class="hero-kana">あア</span>
+      <div class="hero-title">Kana Trainer</div>
+      <div class="hero-sub">Apprends hiragana &amp; katakana</div>
+    </div>
+    <div class="stats-strip">
+      <div class="stat-pill c-teal"><div class="sl">Vus</div><div class="sv" id="homeSeen">0</div></div>
+      <div class="stat-pill c-violet"><div class="sl">Justes</div><div class="sv" id="homeCorrect">0</div></div>
+      <div class="stat-pill c-gold"><div class="sl">Taux</div><div class="sv" id="homeRate">—</div></div>
+      <div class="stat-pill c-red"><div class="sl">Fragiles</div><div class="sv" id="homeWeak">0</div></div>
+    </div>
+    <div class="tiles-grid">
+      <div class="tile t-teal" data-go="hiragana">
+        <div class="tile-icon">あ</div>
+        <div class="tile-title">Hiragana</div>
+        <div class="tile-desc">Table complète, clique sur un kana</div>
+        <div class="tile-cta">Explorer</div>
+      </div>
+      <div class="tile t-violet" data-go="katakana">
+        <div class="tile-icon">ア</div>
+        <div class="tile-title">Katakana</div>
+        <div class="tile-desc">Même structure, autre script</div>
+        <div class="tile-cta">Explorer</div>
+      </div>
+      <div class="tile t-coral" id="homeStartQuizBtn">
+        <div class="tile-icon">📝</div>
+        <div class="tile-title">Quiz</div>
+        <div class="tile-desc">QCM ou frappe clavier</div>
+        <div class="tile-cta">Jouer</div>
+      </div>
+      <div class="tile t-gold" id="homeStartReviewBtn">
+        <div class="tile-icon">🎯</div>
+        <div class="tile-title">Révision</div>
+        <div class="tile-desc">Cible tes points faibles</div>
+        <div class="tile-cta">Réviser</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <h2>Session rapide</h2><span class="label">1 clic</span>
+      </div>
+      <div class="quick-strip">
+        <button class="quick-btn" id="quickHiraganaQuiz"><div class="qicon qi-teal">あ</div><span>Quiz Hiragana</span><span class="qarrow">›</span></button>
+        <button class="quick-btn" id="quickKatakanaQuiz"><div class="qicon qi-violet">ア</div><span>Quiz Katakana</span><span class="qarrow">›</span></button>
+        <button class="quick-btn" id="quickMixedQuiz"><div class="qicon qi-coral">⚡</div><span>Quiz Mixte</span><span class="qarrow">›</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- HIRAGANA -->
+  <section id="hiragana" class="section">
+    <div class="sec-hdr">
+      <div class="sec-hdr-left"><h2>Hiragana</h2><span class="badge" id="hiraganaCount"></span></div>
+      <div class="filter-bar">
+        <button class="fpill active" data-fs="HIRAGANA" data-fc="ALL">Tout</button>
+        <button class="fpill" data-fs="HIRAGANA" data-fc="BASIC">Basique</button>
+        <button class="fpill" data-fs="HIRAGANA" data-fc="DAKUTEN">Dakuten</button>
+        <button class="fpill" data-fs="HIRAGANA" data-fc="YOON">Yōon</button>
+      </div>
+    </div>
+    <div id="hiraganaGrid" class="kana-grid"></div>
+  </section>
+
+  <!-- KATAKANA -->
+  <section id="katakana" class="section">
+    <div class="sec-hdr">
+      <div class="sec-hdr-left"><h2>Katakana</h2><span class="badge badge-v" id="katakanaCount"></span></div>
+      <div class="filter-bar">
+        <button class="fpill active" data-fs="KATAKANA" data-fc="ALL">Tout</button>
+        <button class="fpill" data-fs="KATAKANA" data-fc="BASIC">Basique</button>
+        <button class="fpill" data-fs="KATAKANA" data-fc="DAKUTEN">Dakuten</button>
+        <button class="fpill" data-fs="KATAKANA" data-fc="YOON">Yōon</button>
+      </div>
+    </div>
+    <div id="katakanaGrid" class="kana-grid"></div>
+  </section>
+
+  <!-- DETAIL -->
+  <section id="detail" class="section">
+    <div class="sec-hdr"><button class="btn btn-ghost btn-sm" id="detailBackBtn">← Retour</button></div>
+    <div id="detailContainer"></div>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="quiz" class="section">
+    <div class="sec-hdr">
+      <h2>Quiz</h2>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" id="quizConfigBtn">⚙ Config</button>
+        <button class="btn btn-ghost btn-sm" id="quizResetBtn">↺</button>
+      </div>
+    </div>
+
+    <div class="quiz-cfg" id="quizSetupPanel">
+      <h3>Configuration</h3>
+      <p style="font-size:.76rem;color:var(--text2);margin-top:3px;">Personnalise ta session</p>
+      <div class="cfg-grid">
+        <div class="field"><div class="flabel">Mode</div>
+          <select id="quizMode"><option value="kana_to_romaji">Kana → romaji</option><option value="romaji_to_kana">Romaji → kana</option></select></div>
+        <div class="field"><div class="flabel">Réponse</div>
+          <select id="quizInputType"><option value="mcq">Choix multiple</option><option value="typing">Frappe clavier</option></select></div>
+        <div class="field"><div class="flabel">Script</div>
+          <select id="quizScript"><option value="MIXED">Mixte</option><option value="HIRAGANA">Hiragana</option><option value="KATAKANA">Katakana</option></select></div>
+        <div class="field"><div class="flabel">Catégorie</div>
+          <select id="quizCategory"><option value="ALL">Toutes</option><option value="BASIC">Basique</option><option value="DAKUTEN">Dakuten</option><option value="YOON">Yōon</option></select></div>
+        <div class="field"><div class="flabel">Questions</div>
+          <input id="quizLength" type="number" min="4" max="40" value="10"/></div>
+      </div>
+      <button class="btn btn-teal btn-full btn-lg" id="startQuizBtn">Démarrer →</button>
+    </div>
+
+    <div id="quizPlayPanel" style="display:none;">
+      <div class="quiz-play">
+        <div class="quiz-topbar">
+          <span class="quiz-ctr" id="quizMeta">1 / 10</span>
+          <span class="score-pill" id="quizScorePill">0 ✓</span>
+        </div>
+        <div class="prog-track"><div class="prog-fill" id="quizProgFill" style="width:0%"></div></div>
+        <div class="streak-row" id="streakRow"></div>
+        <div class="quiz-q-card" id="quizQCard">
+          <div class="quiz-lbl" id="quizLbl"></div>
+          <div class="quiz-q" id="quizQ"></div>
+        </div>
+        <div class="ans-grid" id="quizAnswers"></div>
+        <div class="typing-wrap" id="quizTypingWrap" style="display:none;">
+          <input class="typing-input" id="typingInput" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="ta réponse…"/>
+          <div class="typing-hint">Valide avec <kbd>Entrée</kbd></div>
+        </div>
+        <div class="fb" id="quizFb"></div>
+      </div>
+    </div>
+
+    <div id="quizResultPanel" style="display:none;">
+      <div class="result-card">
+        <span class="res-emoji" id="resEmoji">🎉</span>
+        <div class="res-title" id="resTitle">Session terminée</div>
+        <div class="res-sub">Voici tes résultats</div>
+        <div class="res-grid">
+          <div class="rstat"><div class="rl">Score</div><div class="rv" id="resScore" style="color:var(--teal)">0/0</div></div>
+          <div class="rstat"><div class="rl">Taux</div><div class="rv" id="resRate" style="color:var(--violet)">0%</div></div>
+          <div class="rstat"><div class="rl">Erreurs</div><div class="rv" id="resWrong" style="color:var(--red)">0</div></div>
+        </div>
+        <div class="res-actions">
+          <button class="btn btn-teal" id="restartQuizBtn">↺ Relancer</button>
+          <button class="btn btn-coral" id="resultReviewBtn">🎯 Réviser</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REVIEW -->
+  <section id="review" class="section">
+    <div class="sec-hdr">
+      <div><h2>Révision ciblée</h2><div style="font-size:.76rem;color:var(--text2);margin-top:3px;" id="reviewSummary">Lance des quiz pour débloquer</div></div>
+      <button class="btn btn-coral btn-sm" id="startReviewBtn">🎯 Lancer</button>
+    </div>
+    <div class="rv-list" id="reviewList"></div>
+  </section>
+
+  <!-- STATS -->
+  <section id="stats" class="section">
+    <div class="sec-hdr">
+      <h2>Statistiques</h2>
+      <button class="btn btn-sm" style="background:rgba(255,95,95,.12);color:var(--red);border:1px solid rgba(255,95,95,.2);" id="resetDataBtn">🗑 Effacer</button>
+    </div>
+    <div class="stats-big" id="statsGrid"></div>
+    <div class="divider"></div>
+    <h3 style="margin-bottom:12px;">Kana les plus faibles</h3>
+    <div class="rv-list" id="weakestList"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="settings" class="section">
+    <div class="sec-hdr"><h2>Réglages</h2></div>
+    <div class="card" style="max-width:440px;">
+      <div class="settings-group">
+        <div class="field"><div class="flabel">Mode par défaut</div>
+          <select id="defaultMode"><option value="kana_to_romaji">Kana → romaji</option><option value="romaji_to_kana">Romaji → kana</option></select></div>
+        <div class="field"><div class="flabel">Script par défaut</div>
+          <select id="defaultScript"><option value="MIXED">Mixte</option><option value="HIRAGANA">Hiragana</option><option value="KATAKANA">Katakana</option></select></div>
+        <div class="field"><div class="flabel">Longueur par défaut</div>
+          <input id="defaultLength" type="number" min="4" max="40" value="10"/></div>
+        <div class="field"><div class="flabel">Type de réponse par défaut</div>
+          <select id="defaultInputType"><option value="mcq">Choix multiple</option><option value="typing">Frappe clavier</option></select></div>
+        <div class="sw-row">
+          <div><div class="sw-title">Sauvegarde locale</div><div class="sw-sub">Via localStorage · toujours active</div></div>
+          <span class="mbadge">✓ ON</span>
+        </div>
+        <div class="sw-row">
+          <div><div class="sw-title">Sons de feedback</div><div class="sw-sub">Bips de succès et d'erreur</div></div>
+          <label class="toggle-label">
+            <input type="checkbox" id="soundToggle" style="width:15px;height:15px;accent-color:var(--teal);" checked>
+            <span class="mbadge" id="soundBadge">✓ ON</span>
+          </label>
+        </div>
+        <button class="btn btn-teal btn-full" id="saveSettingsBtn">Enregistrer</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">Tout reste dans ton navigateur · Aucune donnée envoyée</div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav" id="bottomNav">
+  <button class="bnav-btn active" data-target="home"><span class="bi">🏠</span>Accueil</button>
+  <button class="bnav-btn" data-target="hiragana"><span class="bi">あ</span>Hiragana</button>
+  <button class="bnav-btn" data-target="katakana"><span class="bi">ア</span>Katakana</button>
+  <button class="bnav-btn" data-target="quiz"><span class="bi">📝</span>Quiz</button>
+  <button class="bnav-btn" data-target="review"><span class="bi">🎯</span>Révision</button>
+  <button class="bnav-btn" data-target="stats"><span class="bi">📊</span>Stats</button>
+  <button class="bnav-btn" data-target="settings"><span class="bi">⚙️</span>Config</button>
+</nav>
+
+<div id="toast"></div>
+
+<script>
+/* AUDIO */
+let actx=null,sndOn=true;
+function gc(){if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();return actx;}
+function tone(f,t,d,v){if(!sndOn)return;try{const c=gc(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type=t;o.frequency.setValueAtTime(f,c.currentTime);g.gain.setValueAtTime(v,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+d);o.start();o.stop(c.currentTime+d);}catch(e){}}
+const sndOk=()=>{tone(523,'sine',.12,.15);setTimeout(()=>tone(659,'sine',.15,.12),70);setTimeout(()=>tone(784,'sine',.2,.1),140);};
+const sndKo=()=>{tone(220,'sawtooth',.08,.1);setTimeout(()=>tone(196,'sawtooth',.12,.08),80);};
+const sndWin=()=>{[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,'sine',.18,.12),i*80));};
+const sndClick=()=>tone(900,'sine',.05,.04);
+
+/* CONFETTI */
+function confetti(n=30){const c=['#3de8c8','#b48efa','#ff7f6b','#52e88c','#ff5f5f','#f5c842'];for(let i=0;i<n;i++){const el=document.createElement('div');el.className='cp';const s=Math.random()*8+4;el.style.cssText=`width:${s}px;height:${s}px;background:${c[Math.random()*c.length|0]};left:${Math.random()*100}vw;top:0;animation-duration:${Math.random()*1.5+1.2}s;animation-delay:${Math.random()*.5}s;`;document.body.appendChild(el);setTimeout(()=>el.remove(),3000);}}
+
+/* TOAST */
+let toastT;
+function toast(msg,dur=2200){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),dur);}
+
+/* DATA */
+const kanaData=[
+  {id:'h_a',s:'あ',r:'a',sc:'HIRAGANA',c:'BASIC'},{id:'h_i',s:'い',r:'i',sc:'HIRAGANA',c:'BASIC'},{id:'h_u',s:'う',r:'u',sc:'HIRAGANA',c:'BASIC'},{id:'h_e',s:'え',r:'e',sc:'HIRAGANA',c:'BASIC'},{id:'h_o',s:'お',r:'o',sc:'HIRAGANA',c:'BASIC'},
+  {id:'h_ka',s:'か',r:'ka',sc:'HIRAGANA',c:'BASIC'},{id:'h_ki',s:'き',r:'ki',sc:'HIRAGANA',c:'BASIC'},{id:'h_ku',s:'く',r:'ku',sc:'HIRAGANA',c:'BASIC'},{id:'h_ke',s:'け',r:'ke',sc:'HIRAGANA',c:'BASIC'},{id:'h_ko',s:'こ',r:'ko',sc:'HIRAGANA',c:'BASIC'},
+  {id:'h_sa',s:'さ',r:'sa',sc:'HIRAGANA',c:'BASIC'},{id:'h_shi',s:'し',r:'shi',sc:'HIRAGANA',c:'BASIC'},{id:'h_su',s:'す',r:'su',sc:'HIRAGANA',c:'BASIC'},{id:'h_se',s:'せ',r:'se',sc:'HIRAGANA',c:'BASIC'},{id:'h_so',s:'そ',r:'so',sc:'HIRAGANA',c:'BASIC'},
+  {id:'h_ta',s:'た',r:'ta',sc:'HIRAGANA',c:'BASIC'},{id:'h_chi',s:'ち',r:'chi',sc:'HIRAGANA',c:'BASIC'},{id:'h_tsu',s:'つ',r:'tsu',sc:'HIRAGANA',c:'BASIC'},{id:'h_te',s:'て',r:'te',sc:'HIRAGANA',c:'BASIC'},{id:'h_to',s:'と',r:'to',sc:'HIRAGANA',c:'BASIC'},
+  {id:'h_na',s:'な',r:'na',sc:'HIRAGANA',c:'BASIC'},{id:'h_ni',s:'に',r:'ni',sc:'HIRAGANA',c:'BASIC'},{id:'h_nu',s:'ぬ',r:'nu',sc:'HIRAGANA',c:'BASIC'},{id:'h_ne',s:'ね',r:'ne',sc:'HIRAGANA',c:'BASIC'},{id:'h_no',s:'の',r:'no',sc:'HIRAGANA',c:'BASIC'},
+  {id:'h_ha',s:'は',r:'ha',sc:'HIRAGANA',c:'BASIC'},{id:'h_hi',s:'ひ',r:'hi',sc:'HIRAGANA',c:'BASIC'},{id:'h_fu',s:'ふ',r:'fu',sc:'HIRAGANA',c:'BASIC'},{id:'h_he',s:'へ',r:'he',sc:'HIRAGANA',c:'BASIC'},{id:'h_ho',s:'ほ',r:'ho',sc:'HIRAGANA',c:'BASIC'},
+  {id:'h_ma',s:'ま',r:'ma',sc:'HIRAGANA',c:'BASIC'},{id:'h_mi',s:'み',r:'mi',sc:'HIRAGANA',c:'BASIC'},{id:'h_mu',s:'む',r:'mu',sc:'HIRAGANA',c:'BASIC'},{id:'h_me',s:'め',r:'me',sc:'HIRAGANA',c:'BASIC'},{id:'h_mo',s:'も',r:'mo',sc:'HIRAGANA',c:'BASIC'},
+  {id:'h_ya',s:'や',r:'ya',sc:'HIRAGANA',c:'BASIC'},{id:'h_yu',s:'ゆ',r:'yu',sc:'HIRAGANA',c:'BASIC'},{id:'h_yo',s:'よ',r:'yo',sc:'HIRAGANA',c:'BASIC'},
+  {id:'h_ra',s:'ら',r:'ra',sc:'HIRAGANA',c:'BASIC'},{id:'h_ri',s:'り',r:'ri',sc:'HIRAGANA',c:'BASIC'},{id:'h_ru',s:'る',r:'ru',sc:'HIRAGANA',c:'BASIC'},{id:'h_re',s:'れ',r:'re',sc:'HIRAGANA',c:'BASIC'},{id:'h_ro',s:'ろ',r:'ro',sc:'HIRAGANA',c:'BASIC'},
+  {id:'h_wa',s:'わ',r:'wa',sc:'HIRAGANA',c:'BASIC'},{id:'h_wo',s:'を',r:'wo',sc:'HIRAGANA',c:'BASIC'},{id:'h_n',s:'ん',r:'n',sc:'HIRAGANA',c:'BASIC'},
+  {id:'h_ga',s:'が',r:'ga',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_gi',s:'ぎ',r:'gi',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_gu',s:'ぐ',r:'gu',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_ge',s:'げ',r:'ge',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_go',s:'ご',r:'go',sc:'HIRAGANA',c:'DAKUTEN'},
+  {id:'h_za',s:'ざ',r:'za',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_ji',s:'じ',r:'ji',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_zu',s:'ず',r:'zu',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_ze',s:'ぜ',r:'ze',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_zo',s:'ぞ',r:'zo',sc:'HIRAGANA',c:'DAKUTEN'},
+  {id:'h_da',s:'だ',r:'da',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_de',s:'で',r:'de',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_do',s:'ど',r:'do',sc:'HIRAGANA',c:'DAKUTEN'},
+  {id:'h_ba',s:'ば',r:'ba',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_bi',s:'び',r:'bi',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_bu',s:'ぶ',r:'bu',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_be',s:'べ',r:'be',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_bo',s:'ぼ',r:'bo',sc:'HIRAGANA',c:'DAKUTEN'},
+  {id:'h_pa',s:'ぱ',r:'pa',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_pi',s:'ぴ',r:'pi',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_pu',s:'ぷ',r:'pu',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_pe',s:'ぺ',r:'pe',sc:'HIRAGANA',c:'DAKUTEN'},{id:'h_po',s:'ぽ',r:'po',sc:'HIRAGANA',c:'DAKUTEN'},
+  {id:'h_kya',s:'きゃ',r:'kya',sc:'HIRAGANA',c:'YOON'},{id:'h_kyu',s:'きゅ',r:'kyu',sc:'HIRAGANA',c:'YOON'},{id:'h_kyo',s:'きょ',r:'kyo',sc:'HIRAGANA',c:'YOON'},
+  {id:'h_sha',s:'しゃ',r:'sha',sc:'HIRAGANA',c:'YOON'},{id:'h_shu',s:'しゅ',r:'shu',sc:'HIRAGANA',c:'YOON'},{id:'h_sho',s:'しょ',r:'sho',sc:'HIRAGANA',c:'YOON'},
+  {id:'h_cha',s:'ちゃ',r:'cha',sc:'HIRAGANA',c:'YOON'},{id:'h_chu',s:'ちゅ',r:'chu',sc:'HIRAGANA',c:'YOON'},{id:'h_cho',s:'ちょ',r:'cho',sc:'HIRAGANA',c:'YOON'},
+  {id:'h_nya',s:'にゃ',r:'nya',sc:'HIRAGANA',c:'YOON'},{id:'h_nyu',s:'にゅ',r:'nyu',sc:'HIRAGANA',c:'YOON'},{id:'h_nyo',s:'にょ',r:'nyo',sc:'HIRAGANA',c:'YOON'},
+  {id:'h_hya',s:'ひゃ',r:'hya',sc:'HIRAGANA',c:'YOON'},{id:'h_hyu',s:'ひゅ',r:'hyu',sc:'HIRAGANA',c:'YOON'},{id:'h_hyo',s:'ひょ',r:'hyo',sc:'HIRAGANA',c:'YOON'},
+  {id:'h_mya',s:'みゃ',r:'mya',sc:'HIRAGANA',c:'YOON'},{id:'h_myu',s:'みゅ',r:'myu',sc:'HIRAGANA',c:'YOON'},{id:'h_myo',s:'みょ',r:'myo',sc:'HIRAGANA',c:'YOON'},
+  {id:'h_rya',s:'りゃ',r:'rya',sc:'HIRAGANA',c:'YOON'},{id:'h_ryu',s:'りゅ',r:'ryu',sc:'HIRAGANA',c:'YOON'},{id:'h_ryo',s:'りょ',r:'ryo',sc:'HIRAGANA',c:'YOON'},
+  {id:'h_gya',s:'ぎゃ',r:'gya',sc:'HIRAGANA',c:'YOON'},{id:'h_gyu',s:'ぎゅ',r:'gyu',sc:'HIRAGANA',c:'YOON'},{id:'h_gyo',s:'ぎょ',r:'gyo',sc:'HIRAGANA',c:'YOON'},
+  {id:'h_ja',s:'じゃ',r:'ja',sc:'HIRAGANA',c:'YOON'},{id:'h_ju',s:'じゅ',r:'ju',sc:'HIRAGANA',c:'YOON'},{id:'h_jo',s:'じょ',r:'jo',sc:'HIRAGANA',c:'YOON'},
+  {id:'h_bya',s:'びゃ',r:'bya',sc:'HIRAGANA',c:'YOON'},{id:'h_byu',s:'びゅ',r:'byu',sc:'HIRAGANA',c:'YOON'},{id:'h_byo',s:'びょ',r:'byo',sc:'HIRAGANA',c:'YOON'},
+  {id:'h_pya',s:'ぴゃ',r:'pya',sc:'HIRAGANA',c:'YOON'},{id:'h_pyu',s:'ぴゅ',r:'pyu',sc:'HIRAGANA',c:'YOON'},{id:'h_pyo',s:'ぴょ',r:'pyo',sc:'HIRAGANA',c:'YOON'},
+  {id:'k_a',s:'ア',r:'a',sc:'KATAKANA',c:'BASIC'},{id:'k_i',s:'イ',r:'i',sc:'KATAKANA',c:'BASIC'},{id:'k_u',s:'ウ',r:'u',sc:'KATAKANA',c:'BASIC'},{id:'k_e',s:'エ',r:'e',sc:'KATAKANA',c:'BASIC'},{id:'k_o',s:'オ',r:'o',sc:'KATAKANA',c:'BASIC'},
+  {id:'k_ka',s:'カ',r:'ka',sc:'KATAKANA',c:'BASIC'},{id:'k_ki',s:'キ',r:'ki',sc:'KATAKANA',c:'BASIC'},{id:'k_ku',s:'ク',r:'ku',sc:'KATAKANA',c:'BASIC'},{id:'k_ke',s:'ケ',r:'ke',sc:'KATAKANA',c:'BASIC'},{id:'k_ko',s:'コ',r:'ko',sc:'KATAKANA',c:'BASIC'},
+  {id:'k_sa',s:'サ',r:'sa',sc:'KATAKANA',c:'BASIC'},{id:'k_shi',s:'シ',r:'shi',sc:'KATAKANA',c:'BASIC'},{id:'k_su',s:'ス',r:'su',sc:'KATAKANA',c:'BASIC'},{id:'k_se',s:'セ',r:'se',sc:'KATAKANA',c:'BASIC'},{id:'k_so',s:'ソ',r:'so',sc:'KATAKANA',c:'BASIC'},
+  {id:'k_ta',s:'タ',r:'ta',sc:'KATAKANA',c:'BASIC'},{id:'k_chi',s:'チ',r:'chi',sc:'KATAKANA',c:'BASIC'},{id:'k_tsu',s:'ツ',r:'tsu',sc:'KATAKANA',c:'BASIC'},{id:'k_te',s:'テ',r:'te',sc:'KATAKANA',c:'BASIC'},{id:'k_to',s:'ト',r:'to',sc:'KATAKANA',c:'BASIC'},
+  {id:'k_na',s:'ナ',r:'na',sc:'KATAKANA',c:'BASIC'},{id:'k_ni',s:'ニ',r:'ni',sc:'KATAKANA',c:'BASIC'},{id:'k_nu',s:'ヌ',r:'nu',sc:'KATAKANA',c:'BASIC'},{id:'k_ne',s:'ネ',r:'ne',sc:'KATAKANA',c:'BASIC'},{id:'k_no',s:'ノ',r:'no',sc:'KATAKANA',c:'BASIC'},
+  {id:'k_ha',s:'ハ',r:'ha',sc:'KATAKANA',c:'BASIC'},{id:'k_hi',s:'ヒ',r:'hi',sc:'KATAKANA',c:'BASIC'},{id:'k_fu',s:'フ',r:'fu',sc:'KATAKANA',c:'BASIC'},{id:'k_he',s:'ヘ',r:'he',sc:'KATAKANA',c:'BASIC'},{id:'k_ho',s:'ホ',r:'ho',sc:'KATAKANA',c:'BASIC'},
+  {id:'k_ma',s:'マ',r:'ma',sc:'KATAKANA',c:'BASIC'},{id:'k_mi',s:'ミ',r:'mi',sc:'KATAKANA',c:'BASIC'},{id:'k_mu',s:'ム',r:'mu',sc:'KATAKANA',c:'BASIC'},{id:'k_me',s:'メ',r:'me',sc:'KATAKANA',c:'BASIC'},{id:'k_mo',s:'モ',r:'mo',sc:'KATAKANA',c:'BASIC'},
+  {id:'k_ya',s:'ヤ',r:'ya',sc:'KATAKANA',c:'BASIC'},{id:'k_yu',s:'ユ',r:'yu',sc:'KATAKANA',c:'BASIC'},{id:'k_yo',s:'ヨ',r:'yo',sc:'KATAKANA',c:'BASIC'},
+  {id:'k_ra',s:'ラ',r:'ra',sc:'KATAKANA',c:'BASIC'},{id:'k_ri',s:'リ',r:'ri',sc:'KATAKANA',c:'BASIC'},{id:'k_ru',s:'ル',r:'ru',sc:'KATAKANA',c:'BASIC'},{id:'k_re',s:'レ',r:'re',sc:'KATAKANA',c:'BASIC'},{id:'k_ro',s:'ロ',r:'ro',sc:'KATAKANA',c:'BASIC'},
+  {id:'k_wa',s:'ワ',r:'wa',sc:'KATAKANA',c:'BASIC'},{id:'k_wo',s:'ヲ',r:'wo',sc:'KATAKANA',c:'BASIC'},{id:'k_n',s:'ン',r:'n',sc:'KATAKANA',c:'BASIC'},
+  {id:'k_ga',s:'ガ',r:'ga',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_gi',s:'ギ',r:'gi',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_gu',s:'グ',r:'gu',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_ge',s:'ゲ',r:'ge',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_go',s:'ゴ',r:'go',sc:'KATAKANA',c:'DAKUTEN'},
+  {id:'k_za',s:'ザ',r:'za',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_ji',s:'ジ',r:'ji',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_zu',s:'ズ',r:'zu',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_ze',s:'ゼ',r:'ze',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_zo',s:'ゾ',r:'zo',sc:'KATAKANA',c:'DAKUTEN'},
+  {id:'k_da',s:'ダ',r:'da',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_de',s:'デ',r:'de',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_do',s:'ド',r:'do',sc:'KATAKANA',c:'DAKUTEN'},
+  {id:'k_ba',s:'バ',r:'ba',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_bi',s:'ビ',r:'bi',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_bu',s:'ブ',r:'bu',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_be',s:'ベ',r:'be',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_bo',s:'ボ',r:'bo',sc:'KATAKANA',c:'DAKUTEN'},
+  {id:'k_pa',s:'パ',r:'pa',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_pi',s:'ピ',r:'pi',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_pu',s:'プ',r:'pu',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_pe',s:'ペ',r:'pe',sc:'KATAKANA',c:'DAKUTEN'},{id:'k_po',s:'ポ',r:'po',sc:'KATAKANA',c:'DAKUTEN'},
+  {id:'k_kya',s:'キャ',r:'kya',sc:'KATAKANA',c:'YOON'},{id:'k_kyu',s:'キュ',r:'kyu',sc:'KATAKANA',c:'YOON'},{id:'k_kyo',s:'キョ',r:'kyo',sc:'KATAKANA',c:'YOON'},
+  {id:'k_sha',s:'シャ',r:'sha',sc:'KATAKANA',c:'YOON'},{id:'k_shu',s:'シュ',r:'shu',sc:'KATAKANA',c:'YOON'},{id:'k_sho',s:'ショ',r:'sho',sc:'KATAKANA',c:'YOON'},
+  {id:'k_cha',s:'チャ',r:'cha',sc:'KATAKANA',c:'YOON'},{id:'k_chu',s:'チュ',r:'chu',sc:'KATAKANA',c:'YOON'},{id:'k_cho',s:'チョ',r:'cho',sc:'KATAKANA',c:'YOON'},
+  {id:'k_nya',s:'ニャ',r:'nya',sc:'KATAKANA',c:'YOON'},{id:'k_nyu',s:'ニュ',r:'nyu',sc:'KATAKANA',c:'YOON'},{id:'k_nyo',s:'ニョ',r:'nyo',sc:'KATAKANA',c:'YOON'},
+  {id:'k_hya',s:'ヒャ',r:'hya',sc:'KATAKANA',c:'YOON'},{id:'k_hyu',s:'ヒュ',r:'hyu',sc:'KATAKANA',c:'YOON'},{id:'k_hyo',s:'ヒョ',r:'hyo',sc:'KATAKANA',c:'YOON'},
+  {id:'k_mya',s:'ミャ',r:'mya',sc:'KATAKANA',c:'YOON'},{id:'k_myu',s:'ミュ',r:'myu',sc:'KATAKANA',c:'YOON'},{id:'k_myo',s:'ミョ',r:'myo',sc:'KATAKANA',c:'YOON'},
+  {id:'k_rya',s:'リャ',r:'rya',sc:'KATAKANA',c:'YOON'},{id:'k_ryu',s:'リュ',r:'ryu',sc:'KATAKANA',c:'YOON'},{id:'k_ryo',s:'リョ',r:'ryo',sc:'KATAKANA',c:'YOON'},
+  {id:'k_gya',s:'ギャ',r:'gya',sc:'KATAKANA',c:'YOON'},{id:'k_gyu',s:'ギュ',r:'gyu',sc:'KATAKANA',c:'YOON'},{id:'k_gyo',s:'ギョ',r:'gyo',sc:'KATAKANA',c:'YOON'},
+  {id:'k_ja',s:'ジャ',r:'ja',sc:'KATAKANA',c:'YOON'},{id:'k_ju',s:'ジュ',r:'ju',sc:'KATAKANA',c:'YOON'},{id:'k_jo',s:'ジョ',r:'jo',sc:'KATAKANA',c:'YOON'},
+  {id:'k_bya',s:'ビャ',r:'bya',sc:'KATAKANA',c:'YOON'},{id:'k_byu',s:'ビュ',r:'byu',sc:'KATAKANA',c:'YOON'},{id:'k_byo',s:'ビョ',r:'byo',sc:'KATAKANA',c:'YOON'},
+  {id:'k_pya',s:'ピャ',r:'pya',sc:'KATAKANA',c:'YOON'},{id:'k_pyu',s:'ピュ',r:'pyu',sc:'KATAKANA',c:'YOON'},{id:'k_pyo',s:'ピョ',r:'pyo',sc:'KATAKANA',c:'YOON'}
+];
+
+const KEYS={stats:'kt_v3_stats',settings:'kt_v3_set',wrong:'kt_v3_wrong'};
+const defSet={defaultMode:'kana_to_romaji',defaultScript:'MIXED',defaultLength:10,soundEnabled:true,defaultInputType:'mcq'};
+function ld(k){try{return JSON.parse(localStorage.getItem(k));}catch{return null;}}
+function sv(k,v){localStorage.setItem(k,JSON.stringify(v));}
+
+const state={
+  section:'home',filters:{HIRAGANA:'ALL',KATAKANA:'ALL'},
+  stats:ld(KEYS.stats)||{},
+  settings:{...defSet,...(ld(KEYS.settings)||{})},
+  quiz:{questions:[],idx:0,correct:0,wrongIds:[],active:false,streak:[],inputType:'mcq'}
+};
+sndOn=state.settings.soundEnabled!==false;
+
+function shuf(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[b[i],b[j]]=[b[j],b[i]];}return b;}
+function samp(a,n){return shuf(a).slice(0,n);}
+function statFor(id){return state.stats[id]||{seen:0,correct:0,wrong:0};}
+function mastery(id){const s=statFor(id);return s.seen?Math.round(s.correct/s.seen*100):0;}
+function mColor(m){if(!m)return'var(--text3)';if(m<50)return'var(--red)';if(m<80)return'var(--gold)';return'var(--green)';}
+function mDot(m){if(!m)return'd0';if(m<50)return'dlo';if(m<80)return'dmid';return'dhi';}
+function updateStat(id,ok){const p=statFor(id);state.stats[id]={seen:p.seen+1,correct:p.correct+(ok?1:0),wrong:p.wrong+(ok?0:1)};sv(KEYS.stats,state.stats);}
+
+function totals(){
+  const v=Object.values(state.stats);
+  const seen=v.reduce((a,b)=>a+(b.seen||0),0),correct=v.reduce((a,b)=>a+(b.correct||0),0),wrong=v.reduce((a,b)=>a+(b.wrong||0),0);
+  const weak=kanaData.filter(k=>{const s=statFor(k.id);return s.seen>0&&s.correct/s.seen<.6;}).length;
+  return{seen,correct,wrong,weak,rate:seen?Math.round(correct/seen*100):0};
+}
+
+function weakest(n=12){
+  return kanaData.map(k=>({k,s:statFor(k.id),m:mastery(k.id)})).filter(x=>x.s.seen>0)
+    .sort((a,b)=>a.m!==b.m?a.m-b.m:b.s.wrong-a.s.wrong).slice(0,n);
+}
+
+function pool(sc,cat){return kanaData.filter(k=>(sc==='MIXED'||k.sc===sc)&&(cat==='ALL'||k.c===cat));}
+
+function navigate(t){
+  sndClick();state.section=t;
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(t).classList.add('active');
+  document.querySelectorAll('.dnav-btn,.bnav-btn').forEach(b=>b.classList.toggle('active',b.dataset.target===t));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function renderHome(){
+  const t=totals();
+  document.getElementById('homeSeen').textContent=t.seen;
+  document.getElementById('homeCorrect').textContent=t.correct;
+  document.getElementById('homeRate').textContent=t.seen?t.rate+'%':'—';
+  document.getElementById('homeWeak').textContent=t.weak;
+}
+
+function renderGrid(sc){
+  const cat=state.filters[sc];
+  const list=kanaData.filter(k=>k.sc===sc&&(cat==='ALL'||k.c===cat));
+  document.getElementById(sc==='HIRAGANA'?'hiraganaCount':'katakanaCount').textContent=list.length+' kana';
+  document.getElementById(sc==='HIRAGANA'?'hiraganaGrid':'katakanaGrid').innerHTML=list.map(k=>{
+    const m=mastery(k.id);
+    const dc=mDot(m);
+    const mc=m===0?'':m>=80?'mhi':m>=50?'mmid':'mlo';
+    return`<div class="kana-card ${mc}" data-did="${k.id}"><div class="kg">${k.s}</div><div class="kr">${k.r}</div><div class="kdot ${dc}"></div></div>`;
+  }).join('');
+}
+
+function openDetail(id){
+  const k=kanaData.find(x=>x.id===id);if(!k)return;
+  const s=statFor(id),m=mastery(id),color=mColor(m);
+  document.getElementById('detailContainer').innerHTML=`
+    <div class="detail-hero">
+      <div class="det-sym">${k.s}</div>
+      <div class="det-tags">
+        <span class="badge">${k.sc==='HIRAGANA'?'Hiragana':'Katakana'}</span>
+        <span class="badge badge-v">${k.c}</span>
+        <span class="badge" style="color:${color};background:rgba(0,0,0,.2);border-color:${color}">Maîtrise ${m}%</span>
+      </div>
+      <div class="det-stats">
+        <div class="dstat"><div class="dl">Vus</div><div class="dv" style="color:var(--teal)">${s.seen}</div></div>
+        <div class="dstat"><div class="dl">Justes</div><div class="dv" style="color:var(--green)">${s.correct}</div></div>
+        <div class="dstat"><div class="dl">Erreurs</div><div class="dv" style="color:var(--red)">${s.wrong}</div></div>
+        <div class="dstat"><div class="dl">Score</div><div class="dv" style="color:${color}">${m}%</div></div>
+      </div>
+      <button class="btn btn-teal btn-full" id="dQuizBtn">Quiz ${k.sc==='HIRAGANA'?'hiragana':'katakana'} →</button>
+    </div>`;
+  document.getElementById('dQuizBtn').onclick=()=>{
+    presetQ({mode:state.settings.defaultMode,sc:k.sc,cat:k.c,len:Math.max(4,Math.min(10,state.settings.defaultLength))});
+    navigate('quiz');
+  };
+  document.getElementById('detailBackBtn').onclick=()=>navigate(k.sc==='HIRAGANA'?'hiragana':'katakana');
+  navigate('detail');
+}
+
+function presetQ({mode,sc,cat='ALL',len,it}){
+  document.getElementById('quizMode').value=mode;
+  document.getElementById('quizScript').value=sc;
+  document.getElementById('quizCategory').value=cat;
+  document.getElementById('quizLength').value=len;
+  if(it)document.getElementById('quizInputType').value=it;
+  document.getElementById('quizSetupPanel').style.display='block';
+  document.getElementById('quizPlayPanel').style.display='none';
+  document.getElementById('quizResultPanel').style.display='none';
+}
+
+function buildQ(k,p,mode){
+  const correct=mode==='kana_to_romaji'?k.r:k.s;
+  const wrongs=[...new Set(p.filter(x=>x.id!==k.id).map(x=>mode==='kana_to_romaji'?x.r:x.s))].filter(v=>v!==correct);
+  return{kanaId:k.id,prompt:mode==='kana_to_romaji'?k.s:k.r,correct,choices:shuf([correct,...samp(wrongs,3)]),mode};
+}
+
+function startQuiz(cp=null){
+  const mode=document.getElementById('quizMode').value;
+  const it=document.getElementById('quizInputType').value;
+  const sc=document.getElementById('quizScript').value;
+  const cat=document.getElementById('quizCategory').value;
+  const len=Math.max(4,Math.min(40,Number(document.getElementById('quizLength').value)||10));
+  const p=cp||pool(sc,cat);
+  if(p.length<4){toast('⚠ Pool trop petit — choisis une catégorie plus large');return;}
+  const chosen=samp(p,Math.min(len,p.length));
+  state.quiz={questions:chosen.map(k=>buildQ(k,p,mode)),idx:0,correct:0,wrongIds:[],active:true,streak:[],inputType:it};
+  document.getElementById('quizSetupPanel').style.display='none';
+  document.getElementById('quizResultPanel').style.display='none';
+  document.getElementById('quizPlayPanel').style.display='block';
+  renderQ();
+}
+
+function renderQ(){
+  const q=state.quiz.questions[state.quiz.idx];
+  if(!q){finishQuiz();return;}
+  const idx=state.quiz.idx+1,total=state.quiz.questions.length,isRom=q.mode==='kana_to_romaji';
+  document.getElementById('quizMeta').textContent=`${idx} / ${total}`;
+  document.getElementById('quizScorePill').textContent=`${state.quiz.correct} ✓`;
+  document.getElementById('quizProgFill').style.width=`${(idx-1)/total*100}%`;
+  document.getElementById('quizLbl').textContent=isRom?'':'';
+  const qEl=document.getElementById('quizQ');
+  qEl.textContent=q.prompt;qEl.className=isRom?'quiz-q':'quiz-q rq';
+  const card=document.getElementById('quizQCard');
+  card.classList.remove('state-ok','state-ko');
+  document.getElementById('streakRow').innerHTML=state.quiz.streak.slice(-10).map(ok=>`<div class="sdot ${ok?'ok':'ko'}"></div>`).join('');
+  const fb=document.getElementById('quizFb');fb.textContent='';fb.className='fb';
+  const isTyping=state.quiz.inputType==='typing';
+  document.getElementById('quizAnswers').style.display=isTyping?'none':'grid';
+  document.getElementById('quizTypingWrap').style.display=isTyping?'flex':'none';
+  if(isTyping){const inp=document.getElementById('typingInput');inp.value='';inp.className='typing-input';inp.disabled=false;setTimeout(()=>inp.focus(),80);}
+  else{
+    document.getElementById('quizAnswers').innerHTML=q.choices.map(c=>`<button class="ans-btn ${isRom?'ra':''}" data-ans="${c}">${c}</button>`).join('');
+    document.querySelectorAll('.ans-btn').forEach(btn=>btn.onclick=()=>submitAnswer(btn.dataset.ans));
+  }
+}
+
+function submitAnswer(ans){
+  const q=state.quiz.questions[state.quiz.idx];
+  const ok=ans.trim().toLowerCase()===q.correct.trim().toLowerCase();
+  updateStat(q.kanaId,ok);
+  if(ok){state.quiz.correct++;sndOk();}else sndKo();
+  state.quiz.streak.push(ok);
+  if(!ok)state.quiz.wrongIds.push(q.kanaId);
+
+  // Card border flash
+  const card=document.getElementById('quizQCard');
+  card.classList.add(ok?'state-ok':'state-ko');
+
+  // Score pill bump on correct
+  if(ok){const sp=document.getElementById('quizScorePill');sp.classList.add('bump');setTimeout(()=>sp.classList.remove('bump'),400);}
+
+  const fb=document.getElementById('quizFb');
+  fb.textContent=ok?'✓ Correct !':`✗ Faux · bonne réponse : ${q.correct}`;
+  fb.className=`fb show ${ok?'ok':'ko'}`;
+  const isTyping=state.quiz.inputType==='typing';
+  if(isTyping){const inp=document.getElementById('typingInput');inp.disabled=true;inp.className=`typing-input ${ok?'tok':'tko'}`;if(!ok)inp.value=q.correct;}
+  else{document.querySelectorAll('.ans-btn').forEach(btn=>{btn.disabled=true;if(btn.dataset.ans===q.correct)btn.classList.add('reveal');else if(btn.dataset.ans===ans&&!ok)btn.classList.add('wrong');});}
+  setTimeout(()=>{state.quiz.idx++;renderHome();renderStats();renderReview();renderGrid('HIRAGANA');renderGrid('KATAKANA');renderQ();},ok?700:1100);
+}
+
+function finishQuiz(){
+  state.quiz.active=false;
+  sv(KEYS.wrong,[...new Set(state.quiz.wrongIds)]);
+  document.getElementById('quizPlayPanel').style.display='none';
+  document.getElementById('quizResultPanel').style.display='block';
+  const total=state.quiz.questions.length,correct=state.quiz.correct,pct=total?Math.round(correct/total*100):0;
+  document.getElementById('resScore').textContent=`${correct}/${total}`;
+  document.getElementById('resRate').textContent=`${pct}%`;
+  document.getElementById('resWrong').textContent=total-correct;
+  if(pct>=80){document.getElementById('resEmoji').textContent='🎉';document.getElementById('resTitle').textContent='Excellent !';sndWin();confetti(50);}
+  else if(pct>=50){document.getElementById('resEmoji').textContent='👍';document.getElementById('resTitle').textContent='Bien joué !';sndWin();}
+  else{document.getElementById('resEmoji').textContent='💪';document.getElementById('resTitle').textContent='Continue !';}
+  renderHome();renderStats();
+}
+
+function renderReview(){
+  const list=weakest(12);
+  document.getElementById('reviewSummary').textContent=list.length?`${list.length} kana fragiles identifiés`:'Lance des quiz pour débloquer la révision.';
+  document.getElementById('reviewList').innerHTML=list.map(({k,s,m})=>{const c=mColor(m);return`<div class="rv-row"><div class="rv-left"><div class="rv-glyph">${k.s}</div><div><div class="rv-top">${k.r} · ${k.sc==='HIRAGANA'?'Hiragana':'Katakana'}</div><div class="rv-sub">${s.seen} vus · ${s.wrong} erreurs</div><div class="mbar-wrap"><div class="mbar"><div class="mbar-fill" style="width:${m}%;background:${c}"></div></div><span class="mbar-pct" style="color:${c}">${m}%</span></div></div></div><button class="btn btn-ghost btn-sm" data-did="${k.id}">Fiche</button></div>`;}).join('');
+}
+
+function startReviewQuiz(){
+  const wids=weakest(20).map(x=>x.k.id),lw=ld(KEYS.wrong)||[];
+  const ids=[...new Set([...lw,...wids])];
+  const p=kanaData.filter(k=>ids.includes(k.id));
+  if(p.length<4){toast('⚠ Pas assez de kana faibles');return;}
+  presetQ({mode:state.settings.defaultMode,sc:'MIXED',cat:'ALL',len:Math.min(Math.max(4,state.settings.defaultLength),p.length)});
+  navigate('quiz');startQuiz(p);
+}
+
+function renderStats(){
+  const t=totals();
+  const hi=kanaData.filter(k=>k.sc==='HIRAGANA'&&statFor(k.id).seen>0).length;
+  const kt=kanaData.filter(k=>k.sc==='KATAKANA'&&statFor(k.id).seen>0).length;
+  document.getElementById('statsGrid').innerHTML=`
+    <div class="sblock"><div class="sbl">Réponses vues</div><div class="sbv" style="color:var(--teal)">${t.seen}</div></div>
+    <div class="sblock"><div class="sbl">Correctes</div><div class="sbv" style="color:var(--green)">${t.correct}</div></div>
+    <div class="sblock"><div class="sbl">Erreurs</div><div class="sbv" style="color:var(--red)">${t.wrong}</div></div>
+    <div class="sblock"><div class="sbl">Taux global</div><div class="sbv" style="color:var(--gold)">${t.rate}%</div></div>
+    <div class="sblock"><div class="sbl">Hiragana travaillés</div><div class="sbv" style="color:var(--teal)">${hi}</div></div>
+    <div class="sblock"><div class="sbl">Katakana travaillés</div><div class="sbv" style="color:var(--violet)">${kt}</div></div>`;
+  const weak=weakest(10);
+  document.getElementById('weakestList').innerHTML=weak.length?weak.map(({k,s,m})=>{const c=mColor(m);return`<div class="rv-row"><div class="rv-left"><div class="rv-glyph">${k.s}</div><div><div class="rv-top">${k.r} · ${k.sc==='HIRAGANA'?'Hiragana':'Katakana'}</div><div class="rv-sub">${s.seen} vus · ${s.wrong} erreurs</div><div class="mbar-wrap"><div class="mbar"><div class="mbar-fill" style="width:${m}%;background:${c}"></div></div><span class="mbar-pct" style="color:${c}">${m}%</span></div></div></div><button class="btn btn-ghost btn-sm" data-did="${k.id}">Ouvrir</button></div>`;}).join(''):'<div style="font-size:.8rem;color:var(--text3);padding:10px 0">Aucune donnée.</div>';
+}
+
+function fillSet(){
+  document.getElementById('defaultMode').value=state.settings.defaultMode;
+  document.getElementById('defaultScript').value=state.settings.defaultScript;
+  document.getElementById('defaultLength').value=state.settings.defaultLength;
+  document.getElementById('defaultInputType').value=state.settings.defaultInputType||'mcq';
+  document.getElementById('quizMode').value=state.settings.defaultMode;
+  document.getElementById('quizScript').value=state.settings.defaultScript;
+  document.getElementById('quizLength').value=state.settings.defaultLength;
+  document.getElementById('quizInputType').value=state.settings.defaultInputType||'mcq';
+  document.getElementById('soundToggle').checked=state.settings.soundEnabled!==false;
+  const sb=document.getElementById('soundBadge');
+  sb.textContent=state.settings.soundEnabled!==false?'✓ ON':'✗ OFF';
+  sb.className=state.settings.soundEnabled!==false?'mbadge':'mbadge off';
+}
+
+/* EVENTS */
+document.querySelectorAll('.dnav-btn,.bnav-btn').forEach(btn=>{
+  btn.onclick=()=>{if(btn.dataset.target)navigate(btn.dataset.target);};
+});
+
+document.querySelectorAll('[data-go]').forEach(btn=>btn.onclick=()=>navigate(btn.dataset.go));
+
+document.body.addEventListener('click',e=>{
+  const c=e.target.closest('[data-did]');
+  if(c)openDetail(c.dataset.did);
+});
+
+document.querySelectorAll('[data-fs]').forEach(btn=>{
+  btn.onclick=()=>{
+    state.filters[btn.dataset.fs]=btn.dataset.fc;
+    document.querySelectorAll(`[data-fs="${btn.dataset.fs}"]`).forEach(b=>b.classList.toggle('active',b===btn));
+    renderGrid(btn.dataset.fs);
+  };
+});
+
+document.getElementById('detailBackBtn').onclick=()=>navigate(state.section==='detail'?'hiragana':state.section);
+document.getElementById('startQuizBtn').onclick=()=>startQuiz();
+document.getElementById('quizConfigBtn').onclick=()=>{document.getElementById('quizSetupPanel').style.display='block';document.getElementById('quizPlayPanel').style.display='none';document.getElementById('quizResultPanel').style.display='none';};
+document.getElementById('quizResetBtn').onclick=()=>presetQ({mode:state.settings.defaultMode,sc:state.settings.defaultScript,cat:'ALL',len:state.settings.defaultLength});
+document.getElementById('restartQuizBtn').onclick=()=>startQuiz();
+document.getElementById('resultReviewBtn').onclick=()=>startReviewQuiz();
+document.getElementById('startReviewBtn').onclick=()=>startReviewQuiz();
+document.getElementById('homeStartReviewBtn').onclick=()=>startReviewQuiz();
+document.getElementById('homeStartQuizBtn').onclick=()=>{presetQ({mode:state.settings.defaultMode,sc:state.settings.defaultScript,cat:'ALL',len:state.settings.defaultLength});navigate('quiz');};
+document.getElementById('quickHiraganaQuiz').onclick=()=>{presetQ({mode:state.settings.defaultMode,sc:'HIRAGANA',cat:'ALL',len:state.settings.defaultLength});navigate('quiz');startQuiz();};
+document.getElementById('quickKatakanaQuiz').onclick=()=>{presetQ({mode:state.settings.defaultMode,sc:'KATAKANA',cat:'ALL',len:state.settings.defaultLength});navigate('quiz');startQuiz();};
+document.getElementById('quickMixedQuiz').onclick=()=>{presetQ({mode:state.settings.defaultMode,sc:'MIXED',cat:'ALL',len:state.settings.defaultLength});navigate('quiz');startQuiz();};
+
+document.getElementById('typingInput').addEventListener('keydown',e=>{
+  if(e.key!=='Enter')return;
+  const inp=document.getElementById('typingInput');
+  if(inp.disabled||!state.quiz.active)return;
+  const v=inp.value.trim();if(!v)return;
+  submitAnswer(v);
+});
+
+document.getElementById('saveSettingsBtn').onclick=()=>{
+  state.settings={
+    defaultMode:document.getElementById('defaultMode').value,
+    defaultScript:document.getElementById('defaultScript').value,
+    defaultLength:Math.max(4,Math.min(40,Number(document.getElementById('defaultLength').value)||10)),
+    soundEnabled:document.getElementById('soundToggle').checked,
+    defaultInputType:document.getElementById('defaultInputType').value
+  };
+  sndOn=state.settings.soundEnabled;sv(KEYS.settings,state.settings);fillSet();toast('Réglages sauvegardés ✓');
+};
+
+document.getElementById('soundToggle').onchange=function(){
+  sndOn=this.checked;
+  const sb=document.getElementById('soundBadge');
+  sb.textContent=this.checked?'✓ ON':'✗ OFF';sb.className=this.checked?'mbadge':'mbadge off';
+};
+
+document.getElementById('resetDataBtn').onclick=()=>{
+  if(!confirm('Effacer toutes les statistiques ?'))return;
+  [KEYS.stats,KEYS.settings,KEYS.wrong].forEach(k=>localStorage.removeItem(k));
+  state.stats={};state.settings={...defSet};fillSet();
+  renderHome();renderStats();renderReview();renderGrid('HIRAGANA');renderGrid('KATAKANA');
+  presetQ({mode:state.settings.defaultMode,sc:state.settings.defaultScript,cat:'ALL',len:state.settings.defaultLength});
+  toast('Données effacées ✓');
+};
+
+/* INIT */
+fillSet();renderHome();renderGrid('HIRAGANA');renderGrid('KATAKANA');renderReview();renderStats();
+presetQ({mode:state.settings.defaultMode,sc:state.settings.defaultScript,cat:'ALL',len:state.settings.defaultLength});
+</script>
+</body>
+</html>
