@@ -1,0 +1,1762 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulateur comparatif — biomimétisme sous-marin</title>
+  <style>
+    :root {
+      --bg-0: #050910;
+      --bg-1: #09131f;
+      --bg-2: #0f1d2d;
+      --panel: rgba(10, 18, 29, 0.92);
+      --panel-2: rgba(15, 27, 41, 0.86);
+      --panel-3: rgba(18, 33, 50, 0.78);
+      --line: rgba(145, 170, 198, 0.18);
+      --line-strong: rgba(170, 198, 222, 0.32);
+      --text: #edf4fb;
+      --muted: #9baec4;
+      --muted-2: #7d8fa4;
+      --accent: #7fc0ff;
+      --accent-2: #93e2c2;
+      --accent-3: #f0c47d;
+      --shadow: 0 22px 55px rgba(0, 0, 0, 0.34);
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 10%, rgba(83, 123, 170, 0.16), transparent 0, transparent 24%),
+        radial-gradient(circle at 88% 18%, rgba(78, 116, 158, 0.12), transparent 0, transparent 28%),
+        linear-gradient(180deg, #070c13 0%, #0a111a 34%, #0b1320 100%);
+      padding: 26px;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: linear-gradient(180deg, rgba(0,0,0,0.4), rgba(0,0,0,0));
+      opacity: 0.3;
+    }
+
+    .app {
+      width: min(1520px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 390px minmax(0, 1fr);
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .panel {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.018), rgba(255,255,255,0)),
+        var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .sidebar {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .main-column {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .section-card {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+    }
+
+    .hero-card {
+      padding: 22px;
+      background:
+        linear-gradient(180deg, rgba(127, 192, 255, 0.08), rgba(255,255,255,0)),
+        var(--panel-2);
+      border-color: var(--line-strong);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(127, 192, 255, 0.22);
+      background: rgba(127, 192, 255, 0.08);
+      color: #c9ddf1;
+      font-size: 0.74rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 2.8vw, 2.35rem);
+      line-height: 1.04;
+      letter-spacing: -0.03em;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.58;
+      font-size: 0.95rem;
+    }
+
+    .hero-copy {
+      margin-top: 12px;
+      max-width: 34ch;
+      color: #c0d0e0;
+    }
+
+    .hero-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .pill {
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      color: #d3deea;
+      font-size: 0.79rem;
+      white-space: nowrap;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #d7e4f0;
+    }
+
+    .section-kicker {
+      color: var(--muted-2);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    .mode-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .mode-btn, button.action {
+      width: 100%;
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0)),
+        rgba(255,255,255,0.02);
+      color: var(--text);
+      border-radius: 18px;
+      padding: 14px 15px;
+      cursor: pointer;
+      text-align: left;
+      transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .mode-btn:hover, button.action:hover {
+      transform: translateY(-1px);
+      border-color: rgba(127, 192, 255, 0.44);
+      background:
+        linear-gradient(180deg, rgba(127, 192, 255, 0.09), rgba(255,255,255,0)),
+        rgba(255,255,255,0.03);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
+    }
+
+    .mode-btn.active {
+      border-color: rgba(147, 226, 194, 0.52);
+      background:
+        linear-gradient(180deg, rgba(147, 226, 194, 0.12), rgba(255,255,255,0)),
+        rgba(255,255,255,0.04);
+      box-shadow: inset 0 0 0 1px rgba(147, 226, 194, 0.12);
+    }
+
+    .mode-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .mode-title {
+      font-weight: 700;
+      font-size: 0.98rem;
+      line-height: 1.25;
+      display: block;
+      color: #f2f7fb;
+    }
+
+    .mode-tag {
+      flex-shrink: 0;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.04);
+      color: #d6e0ea;
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .mode-copy {
+      display: block;
+      color: var(--muted);
+      font-size: 0.89rem;
+      line-height: 1.5;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .stat {
+      background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0)), rgba(255,255,255,0.015);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px 13px;
+    }
+
+    .stat-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 9px;
+      font-size: 0.88rem;
+      color: #dbe7f1;
+    }
+
+    .stat-head strong {
+      font-size: 0.9rem;
+      color: #f3f7fb;
+    }
+
+    .bar {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+
+    .bar > span {
+      display: block;
+      height: 100%;
+      width: 50%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width 0.25s ease;
+    }
+
+    button.action {
+      padding: 14px 16px;
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(127, 192, 255, 0.12), rgba(255,255,255,0)),
+        rgba(255,255,255,0.03);
+      border-color: rgba(127, 192, 255, 0.24);
+    }
+
+    button.action span {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    button.action small {
+      display: block;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
+    .message {
+      padding: 15px 16px;
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(127, 192, 255, 0.08), rgba(255,255,255,0)),
+        rgba(12, 25, 38, 0.86);
+      border: 1px solid rgba(127, 192, 255, 0.14);
+      color: #dbe8f4;
+      min-height: 124px;
+      line-height: 1.56;
+      font-size: 0.92rem;
+    }
+
+    .legend {
+      display: grid;
+      gap: 10px;
+    }
+
+    .legend-item {
+      display: grid;
+      grid-template-columns: 70px 1fr;
+      gap: 10px;
+      align-items: start;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .legend-label {
+      color: #ebf3fb;
+      font-weight: 600;
+    }
+
+    .footer-note {
+      font-size: 0.82rem;
+      color: var(--muted-2);
+      line-height: 1.5;
+      padding-top: 4px;
+    }
+
+    .stage-head {
+      padding: 18px 22px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.026), rgba(255,255,255,0)),
+        var(--panel);
+    }
+
+    .stage-title {
+      min-width: 0;
+    }
+
+    .stage-title h3 {
+      margin: 0;
+      font-size: 1.08rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .stage-title p {
+      margin-top: 6px;
+      max-width: 58ch;
+      font-size: 0.9rem;
+    }
+
+    .stage-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .metric-chip {
+      min-width: 128px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: var(--panel-3);
+    }
+
+    .metric-chip .label {
+      display: block;
+      color: var(--muted-2);
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .metric-chip .value {
+      display: block;
+      color: #f2f7fb;
+      font-size: 0.96rem;
+      font-weight: 700;
+    }
+
+    .world {
+      position: relative;
+      overflow: hidden;
+      min-height: 760px;
+      padding: 0;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.018), rgba(255,255,255,0)),
+        rgba(6, 13, 22, 0.96);
+    }
+
+    .world-topbar {
+      position: absolute;
+      z-index: 3;
+      top: 16px;
+      left: 18px;
+      right: 18px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .world-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(8, 16, 27, 0.58);
+      backdrop-filter: blur(10px);
+      color: #d8e3ef;
+      font-size: 0.82rem;
+    }
+
+    .world-legend-inline {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .world-legend-inline span {
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(8, 16, 27, 0.58);
+      backdrop-filter: blur(10px);
+      color: #d8e3ef;
+      font-size: 0.8rem;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: var(--radius-xl);
+    }
+
+    .hud {
+      position: absolute;
+      z-index: 2;
+      top: 66px;
+      left: 18px;
+      right: 18px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .hud-card {
+      background: rgba(8, 16, 27, 0.64);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 18px;
+      padding: 12px 14px;
+      min-width: 188px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 16px 30px rgba(0, 0, 0, 0.16);
+    }
+
+    .hud-card .big {
+      font-size: 1.22rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .hud-card .small {
+      font-size: 0.77rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    @media (max-width: 1260px) {
+      body {
+        padding: 18px;
+      }
+
+      .app {
+        grid-template-columns: 360px minmax(0, 1fr);
+      }
+
+      .stage-head {
+        flex-direction: column;
+      }
+
+      .stage-metrics {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .main-column {
+        grid-template-rows: auto minmax(560px, 1fr);
+      }
+
+      .world {
+        min-height: 620px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 12px;
+      }
+
+      .sidebar,
+      .stage-head {
+        padding: 16px;
+      }
+
+      .section-card,
+      .hero-card {
+        padding: 16px;
+      }
+
+      .world {
+        min-height: 560px;
+      }
+
+      .world-topbar,
+      .hud {
+        left: 12px;
+        right: 12px;
+      }
+
+      .world-topbar,
+      .hud {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .legend-item {
+        grid-template-columns: 1fr;
+        gap: 4px;
+      }
+
+      .mode-top {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="panel sidebar">
+      <div class="hero-card">
+        <div class="eyebrow">Simulation comparative</div>
+        <h1>Biomimétisme robotique sous-marin</h1>
+        <p class="hero-copy">Démonstrateur de propulsion et de mobilité multi-milieux. L’interface est pensée comme un poste de simulation desktop, pas comme un mini-jeu.</p>
+        <div class="hero-pills">
+          <span class="pill">Vue latérale type aquarium</span>
+          <span class="pill">Architecture eau / terre</span>
+          <span class="pill">Comparaison énergétique</span>
+        </div>
+      </div>
+
+      <section class="section-card">
+        <div class="section-head">
+          <h2>Architectures</h2>
+          <span class="section-kicker">3 systèmes</span>
+        </div>
+        <div class="mode-grid">
+          <button class="mode-btn active" id="classicBtn">
+            <span class="mode-top">
+              <span class="mode-title">Robot sous-marin classique</span>
+              <span class="mode-tag">Hélice</span>
+            </span>
+            <span class="mode-copy">Propulsion motorisée conventionnelle. Solution robuste, mais turbulence élevée et rendement limité.</span>
+          </button>
+          <button class="mode-btn" id="bioBtn">
+            <span class="mode-top">
+              <span class="mode-title">Robot-poisson biomimétique</span>
+              <span class="mode-tag">Queue articulée</span>
+            </span>
+            <span class="mode-copy">Coque segmentée et propulsion oscillante. Meilleur couplage au fluide, vitesse utile plus élevée, pertes réduites.</span>
+          </button>
+          <button class="mode-btn" id="pliantBtn">
+            <span class="mode-top">
+              <span class="mode-title">Robot amphibie ondulatoire</span>
+              <span class="mode-tag">Pliant Energy</span>
+            </span>
+            <span class="mode-copy">Châssis pliant à modules ondulants. Navigation aquatique, franchissement de paroi et évolution sur substrat solide.</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-head">
+          <h2>Indicateurs système</h2>
+          <span class="section-kicker">Temps réel</span>
+        </div>
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-head">
+              <span>Énergie restante</span>
+              <strong id="energyLabel">100%</strong>
+            </div>
+            <div class="bar"><span id="energyBar"></span></div>
+          </div>
+          <div class="stat">
+            <div class="stat-head">
+              <span>Vitesse utile</span>
+              <strong id="speedLabel">Moyenne</strong>
+            </div>
+            <div class="bar"><span id="speedBar"></span></div>
+          </div>
+          <div class="stat">
+            <div class="stat-head">
+              <span>Efficacité</span>
+              <strong id="efficiencyLabel">Médiocre</strong>
+            </div>
+            <div class="bar"><span id="efficiencyBar"></span></div>
+          </div>
+        </div>
+      </section>
+
+      <button class="action" id="resetBtn">
+        <span>Relancer la mission</span>
+        <small>Réinitialise la trajectoire, l’énergie disponible et les balises de mission.</small>
+      </button>
+
+      <section class="section-card">
+        <div class="section-head">
+          <h2>Lecture scientifique</h2>
+          <span class="section-kicker">Interprétation</span>
+        </div>
+        <div class="message" id="messageBox"></div>
+      </section>
+
+      <section class="section-card legend">
+        <div class="section-head">
+          <h2>Cadre de mission</h2>
+          <span class="section-kicker">Règles</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-label">Contrôle</span>
+          <span>La souris pilote la consigne de trajectoire. Le robot converge vers le point visé avec une dynamique propre à son architecture.</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-label">Mission</span>
+          <span>Les deux robots marins récupèrent quatre balises dans la colonne d’eau. Le robot amphibie ajoute une cinquième balise sur la plateforme terrestre.</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-label">Milieux</span>
+          <span>Air en partie haute, colonne d’eau à gauche, colonne de terre à droite. Les robots marins n’accèdent ni à la terre ni à l’air.</span>
+        </div>
+      </section>
+
+      <div class="footer-note">Interface desktop repensée pour une lecture plus sobre, plus technique et plus crédible visuellement.</div>
+    </aside>
+
+    <main class="main-column">
+      <section class="panel stage-head">
+        <div class="stage-title">
+          <h3>Poste de simulation — comparaison propulsion, rendement et franchissement</h3>
+          <p>La scène modélise une coupe latérale d’aquarium avec séparation stricte des milieux. Le comportement du dernier robot illustre une locomotion inspirée du principe Pliant Energy.</p>
+        </div>
+        <div class="stage-metrics">
+          <div class="metric-chip">
+            <span class="label">Vue</span>
+            <span class="value">Coupe latérale</span>
+          </div>
+          <div class="metric-chip">
+            <span class="label">Accès</span>
+            <span class="value">Eau / Terre conditionnelle</span>
+          </div>
+          <div class="metric-chip">
+            <span class="label">Objectif</span>
+            <span class="value">Balises de mission</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel world">
+        <div class="world-topbar">
+          <div class="world-badge">Environnement simulé · eau, paroi, plateforme terrestre</div>
+          <div class="world-legend-inline">
+            <span>Air</span>
+            <span>Colonne d’eau</span>
+            <span>Colonne de terre</span>
+          </div>
+        </div>
+
+        <div class="hud">
+          <div class="hud-card">
+            <div class="small">Mode sélectionné</div>
+            <div class="big" id="modeLabel">Classique</div>
+          </div>
+          <div class="hud-card">
+            <div class="small">Balises récupérées</div>
+            <div class="big"><span id="scoreLabel">0</span>/<span id="goalLabel">4</span></div>
+          </div>
+        </div>
+
+        <canvas id="gameCanvas" width="900" height="720"></canvas>
+      </section>
+    </main>
+  </div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const classicBtn = document.getElementById('classicBtn');
+    const bioBtn = document.getElementById('bioBtn');
+    const pliantBtn = document.getElementById('pliantBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    const energyBar = document.getElementById('energyBar');
+    const speedBar = document.getElementById('speedBar');
+    const efficiencyBar = document.getElementById('efficiencyBar');
+    const energyLabel = document.getElementById('energyLabel');
+    const speedLabel = document.getElementById('speedLabel');
+    const efficiencyLabel = document.getElementById('efficiencyLabel');
+    const messageBox = document.getElementById('messageBox');
+    const modeLabel = document.getElementById('modeLabel');
+    const scoreLabel = document.getElementById('scoreLabel');
+    const goalLabel = document.getElementById('goalLabel');
+
+    const WATER_SURFACE_Y = 110;
+    const SHORE_START_RATIO = 0.68;
+    const LAND_TOP_OFFSET = 34;
+    const CLIMB_FACE_HALF_WIDTH = 22;
+    const LAND_SURFACE_BAND = 86;
+
+    const MODES = {
+      classic: {
+        name: 'Classique',
+        speedWater: 2.5,
+        speedLand: 0,
+        turn: 0.08,
+        drainWater: 0.17,
+        drainLand: 1,
+        speedText: 'Moyenne',
+        efficiencyText: 'Médiocre',
+        speedPct: 52,
+        efficiencyPct: 32,
+        canUseLand: false,
+        message: 'Robot classique : propulsion par hélice fonctionnelle, mais énergivore. Il accomplit la mission marine sans accès au substrat terrestre.'
+      },
+      biomimetic: {
+        name: 'Biomimétique',
+        speedWater: 3.8,
+        speedLand: 0,
+        turn: 0.12,
+        drainWater: 0.08,
+        drainLand: 1,
+        speedText: 'Élevée',
+        efficiencyText: 'Bonne',
+        speedPct: 80,
+        efficiencyPct: 84,
+        canUseLand: false,
+        message: 'Robot-poisson : architecture biomimétique, mais avec coque segmentée, capteurs embarqués et queue articulée. On conserve le gain hydrodynamique tout en affichant clairement une identité robotique.'
+      },
+      pliant: {
+        name: 'Amphibie ondulatoire',
+        speedWater: 3.3,
+        speedLand: 2.4,
+        turn: 0.14,
+        drainWater: 0.09,
+        drainLand: 0.12,
+        speedText: 'Élevée',
+        efficiencyText: 'Très bonne',
+        speedPct: 74,
+        efficiencyPct: 88,
+        canUseLand: true,
+        message: 'Robot amphibie ondulatoire : inspiré du robot pliant de Pliant Energy, avec châssis central et nageoires modulaires ondulantes. Il combine propulsion aquatique efficace, poussée statique élevée et locomotion sur substrat solide.'
+      }
+    };
+
+    let mode = 'classic';
+    let pointer = { x: 260, y: 360, inside: false };
+    let bubbles = [];
+    let particles = [];
+    let wakes = [];
+    let waterTargets = [];
+    let landTarget = null;
+    let plants = [];
+
+    const robot = {
+      x: 160,
+      y: 360,
+      angle: 0,
+      vx: 0,
+      vy: 0,
+      energy: 100,
+      score: 0,
+      distance: 0,
+      tailPhase: 0
+    };
+
+    function rand(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function getWidth() {
+      return canvas.clientWidth || 900;
+    }
+
+    function getHeight() {
+      return canvas.clientHeight || 720;
+    }
+
+    function getShoreStartX() {
+      return getWidth() * SHORE_START_RATIO;
+    }
+
+    function getLandTopY() {
+      return Math.max(56, WATER_SURFACE_Y - LAND_TOP_OFFSET);
+    }
+
+    function getLandSurfaceBottomY() {
+      return Math.min(getHeight() - 38, getLandTopY() + LAND_SURFACE_BAND);
+    }
+
+    function getWaterMaxX() {
+      return getShoreStartX() - CLIMB_FACE_HALF_WIDTH;
+    }
+
+    function getClimbMaxX() {
+      return getShoreStartX() + 12;
+    }
+
+    function isLand(x, y) {
+      return x >= getShoreStartX() && y >= getLandTopY();
+    }
+
+    function isLandSurfaceZone(x, y) {
+      return x >= getClimbMaxX() && y >= getLandTopY() + 10 && y <= getLandSurfaceBottomY();
+    }
+
+    function isClimbFaceZone(x, y) {
+      return x >= getWaterMaxX() && x <= getClimbMaxX() && y >= getLandTopY() + 10 && y <= getHeight() - 34;
+    }
+
+    function isAir(x, y) {
+      if (x < getWaterMaxX()) return y < WATER_SURFACE_Y;
+      if (x <= getClimbMaxX()) return y < getLandTopY();
+      return y < getLandTopY();
+    }
+
+    function getTerrainType(x, y, config = MODES[mode]) {
+      if (!config.canUseLand) return 'water';
+      if (isLandSurfaceZone(x, y)) return 'land';
+      if (isClimbFaceZone(x, y) && y < WATER_SURFACE_Y + 8) return 'land';
+      return 'water';
+    }
+
+    function getSafeSpawn() {
+      const h = getHeight();
+      return {
+        x: 150,
+        y: Math.max(WATER_SURFACE_Y + 70, h * 0.58)
+      };
+    }
+
+    function createPlants() {
+      plants = Array.from({ length: 12 }, (_, i) => ({
+        x: 40 + i * 72 + rand(-18, 18),
+        h: rand(40, 110),
+        sway: rand(0, Math.PI * 2),
+        width: rand(8, 16)
+      }));
+    }
+
+    function spawnWaterTarget(index) {
+      const w = getWidth();
+      const h = getHeight();
+      const maxWaterX = Math.max(w * 0.56, getWaterMaxX() - 34);
+      for (let tries = 0; tries < 100; tries++) {
+        const x = rand(w * 0.42, maxWaterX);
+        const y = rand(Math.max(WATER_SURFACE_Y + 40, h * 0.26), h - 90);
+        if (!isLand(x, y) && x < getWaterMaxX() - 10) {
+          return {
+            x,
+            y,
+            r: 18,
+            pulse: rand(0, Math.PI * 2),
+            collected: false,
+            kind: 'water',
+            label: `B${index + 1}`
+          };
+        }
+      }
+      return {
+        x: Math.min(getWaterMaxX() - 44, w * (0.48 + index * 0.08)),
+        y: h * (0.35 + index * 0.08),
+        r: 18,
+        pulse: rand(0, Math.PI * 2),
+        collected: false,
+        kind: 'water',
+        label: `B${index + 1}`
+      };
+    }
+
+    function spawnTargets() {
+      const w = getWidth();
+      waterTargets = Array.from({ length: 4 }, (_, index) => spawnWaterTarget(index));
+      const landX = w * 0.9;
+      landTarget = {
+        x: landX,
+        y: getLandTopY() + 44,
+        r: 20,
+        pulse: rand(0, Math.PI * 2),
+        collected: false,
+        kind: 'land',
+        label: 'T'
+      };
+    }
+
+    function getMissionGoal() {
+      return mode === 'pliant' ? 5 : 4;
+    }
+
+    function resetMission() {
+      const spawn = getSafeSpawn();
+      robot.x = spawn.x;
+      robot.y = spawn.y;
+      robot.vx = 0;
+      robot.vy = 0;
+      robot.angle = 0;
+      robot.energy = 100;
+      robot.score = 0;
+      robot.distance = 0;
+      robot.tailPhase = 0;
+
+      pointer.x = robot.x + 120;
+      pointer.y = robot.y;
+      pointer.inside = false;
+
+      bubbles = [];
+      particles = [];
+      wakes = [];
+
+      spawnTargets();
+      updateUI();
+    }
+
+    function setMode(nextMode) {
+      mode = nextMode;
+      classicBtn.classList.toggle('active', mode === 'classic');
+      bioBtn.classList.toggle('active', mode === 'biomimetic');
+      pliantBtn.classList.toggle('active', mode === 'pliant');
+      resetMission();
+    }
+
+    function updateUI() {
+      const config = MODES[mode];
+      const goal = getMissionGoal();
+
+      modeLabel.textContent = config.name;
+      scoreLabel.textContent = robot.score;
+      goalLabel.textContent = goal;
+      energyLabel.textContent = `${Math.max(0, robot.energy).toFixed(0)}%`;
+      energyBar.style.width = `${Math.max(0, robot.energy)}%`;
+      speedLabel.textContent = config.speedText;
+      speedBar.style.width = `${config.speedPct}%`;
+      efficiencyLabel.textContent = config.efficiencyText;
+      efficiencyBar.style.width = `${config.efficiencyPct}%`;
+
+      if (robot.energy <= 0 && robot.score < goal) {
+        messageBox.textContent = mode === 'classic'
+          ? 'Mission interrompue : la propulsion classique a épuisé la réserve avant la fin du relevé. Le système fonctionne, mais gaspille beaucoup d’énergie.'
+          : mode === 'biomimetic'
+            ? 'Mission interrompue : le robot-poisson reste plus sobre, mais il demeure limité au milieu aquatique.'
+            : 'Mission interrompue : la mission amphibie est plus ambitieuse. Le robot multi-milieux reste performant, mais son périmètre opérationnel est plus large.';
+        return;
+      }
+
+      if (robot.score >= goal) {
+        messageBox.textContent = mode === 'classic'
+          ? `Mission marine terminée avec ${robot.energy.toFixed(0)}% d’énergie restante. Le robot à hélice accomplit la tâche, mais avec une dépense élevée.`
+          : mode === 'biomimetic'
+            ? `Mission marine terminée avec ${robot.energy.toFixed(0)}% d’énergie restante. Le robot-poisson illustre le bénéfice du biomimétisme : plus de vitesse utile et moins de pertes hydrodynamiques.`
+            : `Mission eau-terre terminée avec ${robot.energy.toFixed(0)}% d’énergie restante. L’architecture ondulatoire inspirée de Pliant Energy montre un second avantage du biomimétisme : la polyvalence inter-milieux.`;
+        return;
+      }
+
+      if (mode === 'pliant') {
+        messageBox.textContent = 'Mode amphibie : récupère les 4 balises marines, grimpe la paroi à droite, puis évolue sur la plateforme terrestre pour capturer la balise finale.';
+        return;
+      }
+
+      messageBox.textContent = config.message;
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = Math.round(rect.width * ratio);
+      canvas.height = Math.round(rect.height * ratio);
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      createPlants();
+      resetMission();
+    }
+
+    function movePointer(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      let x = clientX - rect.left;
+      let y = clientY - rect.top;
+
+      const config = MODES[mode];
+      const w = getWidth();
+      const h = getHeight();
+      const waterMaxX = getWaterMaxX();
+      const climbMaxX = getClimbMaxX();
+      const landTop = getLandTopY();
+      const landBottom = getLandSurfaceBottomY();
+
+      x = Math.max(18, Math.min(w - 18, x));
+      y = Math.max(18, Math.min(h - 18, y));
+
+      if (!config.canUseLand) {
+        x = Math.min(x, waterMaxX - 8);
+        y = Math.max(y, WATER_SURFACE_Y + 24);
+      } else if (x < waterMaxX) {
+        y = Math.max(y, WATER_SURFACE_Y + 18);
+      } else if (x <= climbMaxX) {
+        y = Math.max(y, landTop + 12);
+      } else {
+        y = Math.max(y, landTop + 12);
+        y = Math.min(y, landBottom - 6);
+      }
+
+      pointer.x = x;
+      pointer.y = y;
+      pointer.inside = true;
+    }
+
+    canvas.addEventListener('mousemove', (e) => movePointer(e.clientX, e.clientY));
+    canvas.addEventListener('mouseenter', () => { pointer.inside = true; });
+    canvas.addEventListener('mouseleave', () => { pointer.inside = false; });
+    canvas.addEventListener('touchstart', (e) => {
+      const t = e.touches[0];
+      if (t) movePointer(t.clientX, t.clientY);
+    }, { passive: true });
+    canvas.addEventListener('touchmove', (e) => {
+      const t = e.touches[0];
+      if (t) movePointer(t.clientX, t.clientY);
+    }, { passive: true });
+
+    classicBtn.addEventListener('click', () => setMode('classic'));
+    bioBtn.addEventListener('click', () => setMode('biomimetic'));
+    pliantBtn.addEventListener('click', () => setMode('pliant'));
+    resetBtn.addEventListener('click', resetMission);
+    window.addEventListener('resize', resizeCanvas);
+
+    function spawnPropulsionEffects(terrain) {
+      if (mode === 'classic') {
+        bubbles.push({
+          x: robot.x - Math.cos(robot.angle) * 28,
+          y: robot.y - Math.sin(robot.angle) * 28,
+          r: rand(2, 6),
+          life: 1
+        });
+        return;
+      }
+
+      wakes.push({
+        x: robot.x - Math.cos(robot.angle) * 18,
+        y: robot.y - Math.sin(robot.angle) * 18,
+        life: 1,
+        size: terrain === 'land' ? rand(6, 10) : rand(8, 14),
+        kind: terrain === 'land' ? 'dust' : 'wake',
+        color: mode === 'pliant' ? 'rgba(255, 211, 107, 1)' : 'rgba(125, 255, 191, 1)'
+      });
+    }
+
+    function clampToTerrain(x, y) {
+      const w = getWidth();
+      const h = getHeight();
+      const config = MODES[mode];
+      const waterMaxX = getWaterMaxX();
+      const climbMaxX = getClimbMaxX();
+      const landTop = getLandTopY();
+      const landBottom = getLandSurfaceBottomY();
+
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        return getSafeSpawn();
+      }
+
+      let nx = Math.max(40, Math.min(w - 34, x));
+      let ny = Math.max(26, Math.min(h - 34, y));
+
+      if (!config.canUseLand) {
+        nx = Math.min(nx, waterMaxX - 8);
+        ny = Math.max(ny, WATER_SURFACE_Y + 12);
+        return { x: nx, y: ny };
+      }
+
+      if (nx < waterMaxX) {
+        ny = Math.max(ny, WATER_SURFACE_Y + 12);
+        return { x: nx, y: ny };
+      }
+
+      if (robot.y > landBottom + 6 && nx >= climbMaxX) {
+        nx = climbMaxX - 2;
+      }
+
+      if (nx <= climbMaxX) {
+        nx = Math.min(Math.max(nx, waterMaxX), climbMaxX);
+        ny = Math.max(ny, landTop + 10);
+        return { x: nx, y: ny };
+      }
+
+      ny = Math.min(Math.max(ny, landTop + 10), landBottom);
+      return { x: nx, y: ny };
+    }
+
+    function collectTarget(target) {
+      target.collected = true;
+      robot.score += 1;
+      for (let i = 0; i < 18; i++) {
+        particles.push({
+          x: target.x,
+          y: target.y,
+          vx: rand(-2, 2),
+          vy: rand(-2, 2),
+          life: 1,
+          size: rand(2, 5),
+          color: target.kind === 'land' ? 'rgba(255, 220, 150, 1)' : 'rgba(216, 245, 255, 1)'
+        });
+      }
+      updateUI();
+    }
+
+    function update(dt) {
+      const config = MODES[mode];
+      const goal = getMissionGoal();
+
+      if (robot.energy > 0 && robot.score < goal) {
+        const dx = pointer.x - robot.x;
+        const dy = pointer.y - robot.y;
+        const targetAngle = Math.atan2(dy, dx);
+        let delta = targetAngle - robot.angle;
+        while (delta > Math.PI) delta -= Math.PI * 2;
+        while (delta < -Math.PI) delta += Math.PI * 2;
+        robot.angle += delta * config.turn;
+
+        const terrainType = getTerrainType(robot.x, robot.y, config);
+        const onLand = terrainType === 'land';
+        const speed = onLand ? config.speedLand : config.speedWater;
+        const accel = onLand ? 0.11 : 0.08;
+
+        const targetVx = Math.cos(robot.angle) * speed;
+        const targetVy = Math.sin(robot.angle) * speed;
+        robot.vx += (targetVx - robot.vx) * accel;
+        robot.vy += (targetVy - robot.vy) * accel;
+
+        const prevX = robot.x;
+        const prevY = robot.y;
+        const nextX = robot.x + robot.vx * dt * 60;
+        const nextY = robot.y + robot.vy * dt * 60;
+        const clamped = clampToTerrain(nextX, nextY);
+        robot.x = clamped.x;
+        robot.y = clamped.y;
+
+        const terrain = getTerrainType(robot.x, robot.y, config);
+        const moved = Math.hypot(robot.x - prevX, robot.y - prevY);
+        robot.distance += moved;
+        robot.energy -= moved * (terrain === 'land' ? config.drainLand : config.drainWater) * 0.02;
+        robot.tailPhase += dt * (terrain === 'land' ? 13 : 10);
+
+        if (Math.random() < 0.42 && moved > 0.2) {
+          spawnPropulsionEffects(terrain);
+        }
+
+        waterTargets.forEach((target) => {
+          target.pulse += dt * 3;
+          if (!target.collected && Math.hypot(robot.x - target.x, robot.y - target.y) < target.r + 24) {
+            collectTarget(target);
+          }
+        });
+
+        if (landTarget) {
+          landTarget.pulse += dt * 3;
+          if (mode === 'pliant' && !landTarget.collected && Math.hypot(robot.x - landTarget.x, robot.y - landTarget.y) < landTarget.r + 26) {
+            collectTarget(landTarget);
+          }
+        }
+
+        if (robot.energy <= 0) {
+          robot.energy = 0;
+          updateUI();
+        }
+        if (robot.score >= goal) {
+          updateUI();
+        }
+      }
+
+      bubbles = bubbles.filter((b) => b.life > 0);
+      bubbles.forEach((b) => {
+        b.y -= 0.8;
+        b.x += Math.sin(b.life * 8) * 0.3;
+        b.life -= 0.02;
+      });
+
+      wakes = wakes.filter((t) => t.life > 0);
+      wakes.forEach((t) => {
+        t.life -= t.kind === 'dust' ? 0.045 : 0.035;
+      });
+
+      particles = particles.filter((p) => p.life > 0);
+      particles.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.02;
+        p.life -= 0.025;
+      });
+
+      energyLabel.textContent = `${Math.max(0, robot.energy).toFixed(0)}%`;
+      energyBar.style.width = `${Math.max(0, robot.energy)}%`;
+      scoreLabel.textContent = robot.score;
+    }
+
+    function drawBackground(time) {
+      const w = getWidth();
+      const h = getHeight();
+      const shoreStart = getShoreStartX();
+      const waterMaxX = getWaterMaxX();
+      const climbMaxX = getClimbMaxX();
+      const landTop = getLandTopY();
+      const landBottom = getLandSurfaceBottomY();
+
+      const airGradient = ctx.createLinearGradient(0, 0, 0, Math.max(WATER_SURFACE_Y, landTop));
+      airGradient.addColorStop(0, '#b8dcf7');
+      airGradient.addColorStop(1, '#e8f6ff');
+      ctx.fillStyle = airGradient;
+      ctx.fillRect(0, 0, w, h);
+
+      const waterGradient = ctx.createLinearGradient(0, WATER_SURFACE_Y, 0, h);
+      waterGradient.addColorStop(0, '#1d5e8f');
+      waterGradient.addColorStop(0.25, '#123d62');
+      waterGradient.addColorStop(0.6, '#0a2741');
+      waterGradient.addColorStop(1, '#06111d');
+      ctx.fillStyle = waterGradient;
+      ctx.fillRect(0, WATER_SURFACE_Y, shoreStart, h - WATER_SURFACE_Y);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+      ctx.fillRect(0, WATER_SURFACE_Y - 3, waterMaxX, 6);
+
+      for (let i = 0; i < 7; i++) {
+        ctx.fillStyle = `rgba(120, 210, 255, ${0.03 + i * 0.01})`;
+        ctx.beginPath();
+        const y = WATER_SURFACE_Y + 22 + i * 74 + Math.sin(time * 0.5 + i) * 10;
+        ctx.ellipse(w * (0.16 + i * 0.1), y, 135, 22, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = '#0a1d27';
+      ctx.beginPath();
+      ctx.moveTo(0, h - 60);
+      for (let x = 0; x <= waterMaxX; x += 90) {
+        ctx.lineTo(x, h - 58 - Math.sin(x * 0.02) * 12 - Math.cos(x * 0.01) * 10);
+      }
+      ctx.lineTo(waterMaxX, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fill();
+
+      const sandGradient = ctx.createLinearGradient(shoreStart, landTop, w, h);
+      sandGradient.addColorStop(0, 'rgba(215, 186, 134, 0.98)');
+      sandGradient.addColorStop(1, 'rgba(187, 146, 92, 0.98)');
+      ctx.fillStyle = sandGradient;
+      ctx.fillRect(shoreStart, landTop, w - shoreStart, h - landTop);
+
+      ctx.fillStyle = 'rgba(120, 88, 48, 0.24)';
+      for (let i = 0; i < 5; i++) {
+        const y = landTop + 36 + i * 56 + Math.sin(time * 0.6 + i) * 3;
+        ctx.fillRect(shoreStart, y, w - shoreStart, 8);
+      }
+
+      const faceGradient = ctx.createLinearGradient(waterMaxX, 0, climbMaxX, 0);
+      faceGradient.addColorStop(0, 'rgba(124, 91, 55, 0.45)');
+      faceGradient.addColorStop(1, 'rgba(86, 61, 33, 0.92)');
+      ctx.fillStyle = faceGradient;
+      ctx.fillRect(waterMaxX, landTop, climbMaxX - waterMaxX, h - landTop);
+
+      ctx.strokeStyle = 'rgba(255, 244, 212, 0.88)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(shoreStart, landTop);
+      ctx.lineTo(w, landTop);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(shoreStart, landTop);
+      ctx.lineTo(shoreStart, h);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.beginPath();
+      ctx.arc(w * 0.16, 44, 22, 0, Math.PI * 2);
+      ctx.fill();
+
+      plants.forEach((plant, i) => {
+        const sway = Math.sin(time * 1.2 + plant.sway) * 10;
+        ctx.strokeStyle = `rgba(65, 180, 130, ${0.45 + (i % 3) * 0.1})`;
+        ctx.lineWidth = plant.width * 0.35;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(plant.x, h - 45);
+        ctx.quadraticCurveTo(plant.x + sway, h - plant.h, plant.x + sway * 0.4, h - plant.h - 24);
+        ctx.stroke();
+      });
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.76)';
+      ctx.font = '12px Inter, Arial, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('Air', 24, 28);
+      ctx.fillText('Colonne d’eau', 24, WATER_SURFACE_Y + 28);
+      ctx.fillText('Colonne de terre', shoreStart + 18, landTop - 14);
+      ctx.fillText('Paroi franchissable uniquement par le robot amphibie', waterMaxX - 6, Math.max(landTop + 24, WATER_SURFACE_Y + 26));
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(0, WATER_SURFACE_Y);
+      ctx.lineTo(waterMaxX, WATER_SURFACE_Y);
+      ctx.moveTo(shoreStart, landTop);
+      ctx.lineTo(w, landTop);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawTarget(target, accent, disabled = false) {
+      if (!target || target.collected) return;
+      const pulse = 1 + Math.sin(target.pulse) * 0.08;
+      ctx.save();
+      ctx.translate(target.x, target.y);
+      ctx.scale(pulse, pulse);
+
+      ctx.fillStyle = disabled ? 'rgba(255, 255, 255, 0.04)' : `${accent}22`;
+      ctx.beginPath();
+      ctx.arc(0, 0, 30, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = disabled ? 'rgba(255,255,255,0.24)' : accent;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, target.r, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = disabled ? 'rgba(255,255,255,0.45)' : '#f8fbff';
+      ctx.font = 'bold 12px Inter, Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(target.label, 0, 4);
+      ctx.restore();
+    }
+
+    function drawTargets() {
+      waterTargets.forEach((target) => drawTarget(target, 'rgba(89, 212, 255, 0.9)'));
+      drawTarget(landTarget, 'rgba(255, 211, 107, 0.95)', mode !== 'pliant');
+
+      if (landTarget && !landTarget.collected && mode !== 'pliant') {
+        ctx.fillStyle = 'rgba(255,255,255,0.74)';
+        ctx.font = '12px Inter, Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Inaccessible', landTarget.x, landTarget.y + 38);
+      }
+    }
+
+    function drawClassicRobot() {
+      ctx.save();
+      ctx.translate(robot.x, robot.y);
+      ctx.rotate(robot.angle);
+
+      ctx.fillStyle = '#9ad0ff';
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(-28, -14, 56, 28, 12);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#dff4ff';
+      ctx.beginPath();
+      ctx.arc(12, 0, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#7a94ac';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-28, -10);
+      ctx.lineTo(-40, -16);
+      ctx.moveTo(-28, 10);
+      ctx.lineTo(-40, 16);
+      ctx.stroke();
+
+      ctx.save();
+      ctx.translate(-38, 0);
+      ctx.rotate(performance.now() * 0.02);
+      ctx.strokeStyle = '#f2fbff';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 4; i++) {
+        ctx.rotate(Math.PI / 2);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(11, 0);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      ctx.restore();
+    }
+
+    function drawBioRobot() {
+      ctx.save();
+      ctx.translate(robot.x, robot.y);
+      ctx.rotate(robot.angle);
+      const wag = Math.sin(robot.tailPhase * 1.5) * 0.38;
+
+      ctx.strokeStyle = 'rgba(214, 255, 239, 0.75)';
+      ctx.lineWidth = 1.4;
+
+      // nez capteur
+      ctx.fillStyle = '#c7fff0';
+      ctx.beginPath();
+      ctx.moveTo(30, 0);
+      ctx.lineTo(18, -8);
+      ctx.lineTo(18, 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // coque principale anguleuse
+      ctx.fillStyle = '#2ecf92';
+      ctx.beginPath();
+      ctx.moveTo(18, -12);
+      ctx.lineTo(-4, -16);
+      ctx.lineTo(-20, -11);
+      ctx.lineTo(-24, 0);
+      ctx.lineTo(-20, 11);
+      ctx.lineTo(-4, 16);
+      ctx.lineTo(18, 12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // panneaux de coque
+      ctx.fillStyle = '#165f49';
+      ctx.beginPath();
+      ctx.moveTo(10, -8);
+      ctx.lineTo(-1, -11);
+      ctx.lineTo(-8, -6);
+      ctx.lineTo(3, -3);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(10, 8);
+      ctx.lineTo(-1, 11);
+      ctx.lineTo(-8, 6);
+      ctx.lineTo(3, 3);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(5, 32, 26, 0.65)';
+      ctx.lineWidth = 1.2;
+      for (const x of [9, 0, -9]) {
+        ctx.beginPath();
+        ctx.moveTo(x, -10 + Math.abs(x) * 0.08);
+        ctx.lineTo(x - 3, 10 - Math.abs(x) * 0.08);
+        ctx.stroke();
+      }
+
+      // capteur optique
+      ctx.fillStyle = '#052e24';
+      ctx.beginPath();
+      ctx.arc(16, -2, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#dffcff';
+      ctx.beginPath();
+      ctx.arc(16, -2, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ailerons stabilisateurs mécaniques
+      ctx.fillStyle = '#8fffd0';
+      ctx.strokeStyle = 'rgba(214, 255, 239, 0.55)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, -7);
+      ctx.lineTo(-8, -18);
+      ctx.lineTo(-1, -14);
+      ctx.lineTo(4, -9);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(0, 7);
+      ctx.lineTo(-8, 18);
+      ctx.lineTo(-1, 14);
+      ctx.lineTo(4, 9);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // articulation de queue
+      ctx.fillStyle = '#0f3e31';
+      ctx.fillRect(-25, -5, 6, 10);
+
+      ctx.save();
+      ctx.translate(-24, 0);
+      ctx.rotate(wag);
+
+      ctx.fillStyle = '#63efb6';
+      ctx.strokeStyle = 'rgba(214, 255, 239, 0.68)';
+      ctx.lineWidth = 1.2;
+
+      ctx.beginPath();
+      ctx.moveTo(0, -8);
+      ctx.lineTo(-12, -12);
+      ctx.lineTo(-16, 0);
+      ctx.lineTo(-12, 12);
+      ctx.lineTo(0, 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(-16, 0);
+      ctx.lineTo(-31, -12);
+      ctx.lineTo(-27, 0);
+      ctx.lineTo(-31, 12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(6, 42, 31, 0.75)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-9, -8);
+      ctx.lineTo(-9, 8);
+      ctx.moveTo(-20, -7);
+      ctx.lineTo(-20, 7);
+      ctx.stroke();
+
+      ctx.restore();
+      ctx.restore();
+    }
+
+    function drawPliantRobot() {
+      ctx.save();
+      ctx.translate(robot.x, robot.y);
+      ctx.rotate(robot.angle);
+      const flap = Math.sin(robot.tailPhase * 1.7) * 0.42;
+      const onLand = isLand(robot.x, robot.y);
+
+      ctx.strokeStyle = 'rgba(255, 242, 201, 0.75)';
+      ctx.lineWidth = 1.3;
+
+      // châssis central rigide
+      ctx.fillStyle = '#f0b83c';
+      ctx.beginPath();
+      ctx.roundRect(-12, -12, 28, 24, 7);
+      ctx.fill();
+      ctx.stroke();
+
+      // cabine / carénage
+      ctx.fillStyle = '#73510c';
+      ctx.beginPath();
+      ctx.roundRect(-4, -7, 14, 14, 4);
+      ctx.fill();
+
+      // capteurs frontaux
+      ctx.fillStyle = '#fff4d6';
+      ctx.beginPath();
+      ctx.moveTo(24, 0);
+      ctx.lineTo(16, -6);
+      ctx.lineTo(16, 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#3d2a00';
+      ctx.beginPath();
+      ctx.arc(18, -2.5, 2.3, 0, Math.PI * 2);
+      ctx.arc(18, 2.5, 2.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // liaisons mécaniques vers les nageoires ondulantes
+      ctx.strokeStyle = 'rgba(87, 58, 0, 0.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-9, -6);
+      ctx.lineTo(-19, -10);
+      ctx.moveTo(-9, 6);
+      ctx.lineTo(-19, 10);
+      ctx.stroke();
+
+      // modules pliants type Pliant Energy
+      ctx.save();
+      ctx.translate(-16, -9);
+      ctx.rotate(flap);
+      ctx.fillStyle = '#ffd978';
+      ctx.beginPath();
+      ctx.moveTo(4, 0);
+      ctx.lineTo(-4, -3);
+      ctx.lineTo(-14, -11);
+      ctx.lineTo(-27, -9);
+      ctx.lineTo(-20, 0);
+      ctx.lineTo(-27, 9);
+      ctx.lineTo(-14, 11);
+      ctx.lineTo(-4, 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(111, 74, 0, 0.72)';
+      ctx.lineWidth = 1;
+      for (const x of [-6, -14, -21]) {
+        ctx.beginPath();
+        ctx.moveTo(x, -7 + Math.abs(x) * 0.06);
+        ctx.lineTo(x, 7 - Math.abs(x) * 0.06);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(-16, 9);
+      ctx.rotate(-flap);
+      ctx.fillStyle = '#ffd978';
+      ctx.beginPath();
+      ctx.moveTo(4, 0);
+      ctx.lineTo(-4, -3);
+      ctx.lineTo(-14, -11);
+      ctx.lineTo(-27, -9);
+      ctx.lineTo(-20, 0);
+      ctx.lineTo(-27, 9);
+      ctx.lineTo(-14, 11);
+      ctx.lineTo(-4, 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(111, 74, 0, 0.72)';
+      ctx.lineWidth = 1;
+      for (const x of [-6, -14, -21]) {
+        ctx.beginPath();
+        ctx.moveTo(x, -7 + Math.abs(x) * 0.06);
+        ctx.lineTo(x, 7 - Math.abs(x) * 0.06);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // patins de contact visibles sur sol
+      if (onLand) {
+        ctx.fillStyle = 'rgba(91, 60, 0, 0.85)';
+        ctx.beginPath();
+        ctx.roundRect(-7, -15, 8, 4, 2);
+        ctx.roundRect(-7, 11, 8, 4, 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    function drawEffects() {
+      bubbles.forEach((b) => {
+        ctx.strokeStyle = `rgba(220, 245, 255, ${b.life})`;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+
+      wakes.forEach((t) => {
+        if (t.kind === 'dust') {
+          ctx.fillStyle = `rgba(245, 223, 173, ${t.life * 0.22})`;
+          ctx.beginPath();
+          ctx.ellipse(t.x, t.y, t.size, t.size * 0.7, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          const baseAlpha = mode === 'pliant' ? 0.22 : 0.18;
+          ctx.fillStyle = t.color.replace('1)', `${t.life * baseAlpha})`);
+          ctx.beginPath();
+          ctx.ellipse(t.x, t.y, t.size, t.size * 0.45, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      particles.forEach((p) => {
+        ctx.fillStyle = p.color.replace('1)', `${p.life})`);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min(0.03, (now - last) / 1000);
+      last = now;
+
+      update(dt);
+      drawBackground(now * 0.001);
+      drawTargets();
+      drawEffects();
+
+      if (mode === 'classic') drawClassicRobot();
+      else if (mode === 'biomimetic') drawBioRobot();
+      else drawPliantRobot();
+
+      requestAnimationFrame(loop);
+    }
+
+    resizeCanvas();
+    setMode('classic');
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
