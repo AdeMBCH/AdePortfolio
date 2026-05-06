@@ -3,11 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Git Merge Timeline</title>
+  <title>Git Merge Timeline — Wheel</title>
 
   <style>
     :root {
-      --bg: #050616;
       --panel: rgba(8, 10, 26, 0.92);
       --text: #F4F7FF;
       --muted: #9EA8D6;
@@ -32,9 +31,7 @@
       font-family: var(--sans);
     }
 
-    body {
-      padding: 16px;
-    }
+    body { padding: 16px; }
 
     .git-widget {
       width: min(100%, 1120px);
@@ -56,12 +53,12 @@
       inset: 0;
       pointer-events: none;
       background:
-        linear-gradient(rgba(255,255,255,0.022) 50%, rgba(0,0,0,0.035) 50%),
-        linear-gradient(90deg, rgba(255,0,0,0.014), rgba(0,255,0,0.008), rgba(0,0,255,0.014));
+        linear-gradient(rgba(255,255,255,0.018) 50%, rgba(0,0,0,0.03) 50%),
+        linear-gradient(90deg, rgba(255,0,0,0.012), rgba(0,255,0,0.006), rgba(0,0,255,0.012));
       background-size: 100% 4px, 6px 100%;
-      opacity: 0.32;
+      opacity: 0.26;
       mix-blend-mode: screen;
-      z-index: 10;
+      z-index: 30;
     }
 
     .terminal-head {
@@ -78,18 +75,8 @@
       color: var(--muted);
     }
 
-    .dots {
-      display: inline-flex;
-      gap: 8px;
-      flex: 0 0 auto;
-    }
-
-    .dot {
-      width: 11px;
-      height: 11px;
-      border-radius: 999px;
-    }
-
+    .dots { display: inline-flex; gap: 8px; flex: 0 0 auto; }
+    .dot { width: 11px; height: 11px; border-radius: 999px; }
     .dot:nth-child(1) { background: #ff5f56; }
     .dot:nth-child(2) { background: #ffbd2e; }
     .dot:nth-child(3) { background: #27c93f; }
@@ -102,7 +89,7 @@
     }
 
     .hero {
-      padding: clamp(20px, 4vw, 40px) clamp(18px, 5vw, 56px) 10px;
+      padding: clamp(20px, 4vw, 40px) clamp(18px, 5vw, 56px) 6px;
     }
 
     .prompt {
@@ -149,9 +136,8 @@
     }
 
     .subtitle {
-      margin: 16px 0 0;
-      max-width: 760px;
-      min-height: 1px;
+      margin: 14px 0 0;
+      max-width: 780px;
       color: #BEC6F5;
       font-size: clamp(14px, 2vw, 16px);
       line-height: 1.7;
@@ -159,55 +145,67 @@
 
     .timeline {
       position: relative;
-      padding: 34px clamp(14px, 5vw, 56px) 56px;
+      padding: 18px clamp(14px, 5vw, 56px) 38px;
     }
 
     .timeline-canvas {
+      --center-x: 50%;
       position: relative;
+      height: 560px;
+      overflow: hidden;
+      perspective: 1200px;
+      perspective-origin: 50% 50%;
+      border-radius: 18px;
+    }
+
+    .timeline-canvas::before,
+    .timeline-canvas::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 92px;
+      z-index: 18;
+      pointer-events: none;
+    }
+
+    .timeline-canvas::before {
+      top: 0;
+      background: linear-gradient(180deg, rgba(5, 6, 22, 0.92), transparent);
+    }
+
+    .timeline-canvas::after {
+      bottom: 0;
+      background: linear-gradient(0deg, rgba(5, 6, 22, 0.92), transparent);
     }
 
     .main-line {
       position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 50%;
+      top: 24px;
+      bottom: 24px;
+      left: var(--center-x);
       width: 4px;
       transform: translateX(-50%);
       border-radius: 999px;
-      background: linear-gradient(
-        180deg,
-        transparent,
-        rgba(47,91,255,0.36),
-        rgba(255,79,163,0.82),
-        rgba(47,91,255,0.36),
-        transparent
-      );
-      box-shadow:
-        0 0 30px rgba(255, 79, 163, 0.34),
-        0 0 42px rgba(47, 91, 255, 0.18);
+      background: linear-gradient(180deg, transparent, rgba(47,91,255,0.36), rgba(255,79,163,0.82), rgba(47,91,255,0.36), transparent);
+      box-shadow: 0 0 30px rgba(255, 79, 163, 0.34), 0 0 42px rgba(47, 91, 255, 0.18);
       z-index: 0;
     }
 
-    .main-line::before,
-    .main-line::after {
-      content: "";
+    .wheel-backplate {
       position: absolute;
-      left: 50%;
-      width: 18px;
-      height: 18px;
-      transform: translateX(-50%);
-      border-radius: 50%;
-      border: 2px solid transparent;
-      background:
-        linear-gradient(#07091d, #07091d) padding-box,
-        var(--et-gradient) border-box;
-      box-shadow:
-        0 0 20px rgba(255, 79, 163, 0.72),
-        0 0 28px rgba(47, 91, 255, 0.42);
+      left: var(--center-x);
+      top: 50%;
+      width: 190px;
+      height: 470px;
+      transform: translate(-50%, -50%) rotateX(64deg);
+      border-radius: 999px;
+      border: 1px solid rgba(244, 247, 255, 0.08);
+      background: radial-gradient(ellipse at center, rgba(255, 79, 163, 0.08), rgba(47, 91, 255, 0.025) 48%, transparent 72%);
+      box-shadow: inset 0 0 36px rgba(255, 79, 163, 0.08), 0 0 52px rgba(47, 91, 255, 0.08);
+      z-index: 0;
+      pointer-events: none;
     }
-
-    .main-line::before { top: 0; }
-    .main-line::after { bottom: 0; }
 
     .merge-svg {
       position: absolute;
@@ -216,7 +214,7 @@
       height: 100%;
       overflow: visible;
       pointer-events: none;
-      z-index: 1;
+      z-index: 6;
     }
 
     .merge-path {
@@ -226,64 +224,51 @@
       stroke-linecap: round;
       stroke-linejoin: round;
       filter: drop-shadow(0 0 8px var(--branch-color));
-      opacity: 0.92;
+      opacity: 0.95;
       stroke-dasharray: var(--path-length);
       stroke-dashoffset: var(--path-length);
-      animation: drawPath 650ms ease forwards;
+      animation: drawPath 460ms ease forwards;
     }
 
     @keyframes drawPath { to { stroke-dashoffset: 0; } }
 
-    .timeline-list {
-      position: relative;
-      z-index: 2;
-      display: grid;
-      gap: 14px;
-    }
-
-    .event {
-      position: relative;
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 112px minmax(0, 1fr);
-      gap: 28px;
-      align-items: center;
-      min-height: 86px;
-      padding: 22px 0;
-      transition: min-height 220ms ease, padding 220ms ease;
-    }
-
-    .event.is-active {
-      min-height: 330px;
-      padding: 34px 0;
-    }
-
-    .date-node {
-      position: relative;
-      grid-column: 2;
-      justify-self: center;
+    .wheel-node {
+      position: absolute;
+      left: var(--center-x);
+      top: 50%;
       width: 96px;
       height: 38px;
       display: grid;
       place-items: center;
       border: 1px solid transparent;
       border-radius: 999px;
-      background:
-        linear-gradient(#07091d, #07091d) padding-box,
-        var(--et-gradient) border-box;
+      background: linear-gradient(#07091d, #07091d) padding-box, var(--et-gradient) border-box;
       color: #F4F7FF;
-      box-shadow:
-        0 0 0 6px rgba(47, 91, 255, 0.08),
-        0 0 28px rgba(255, 79, 163, 0.36),
-        0 0 34px rgba(47, 91, 255, 0.24);
+      box-shadow: 0 0 0 6px rgba(47, 91, 255, 0.08), 0 0 28px rgba(255, 79, 163, 0.36), 0 0 34px rgba(47, 91, 255, 0.24);
       font-family: var(--mono);
       font-size: 13px;
       font-weight: 700;
       cursor: pointer;
       appearance: none;
-      z-index: 5;
+      transform: translate(-50%, -50%) translateY(var(--wheel-y)) translateZ(var(--wheel-z)) rotateX(var(--wheel-rotate)) scale(var(--wheel-scale));
+      transform-origin: center center;
+      opacity: var(--wheel-opacity);
+      filter: blur(var(--wheel-blur));
+      z-index: var(--wheel-z-index);
+      pointer-events: auto;
+      transition: transform 560ms cubic-bezier(.16,.9,.24,1), opacity 360ms ease, filter 360ms ease, box-shadow 160ms ease;
     }
 
-    .date-node::after {
+    .wheel-node.is-active {
+      box-shadow: 0 0 0 7px rgba(47, 91, 255, 0.12), 0 0 34px rgba(255, 79, 163, 0.56), 0 0 46px rgba(47, 91, 255, 0.36);
+    }
+
+    .wheel-node.is-hidden {
+      pointer-events: none;
+      visibility: hidden;
+    }
+
+    .wheel-node::after {
       content: "merge";
       position: absolute;
       top: calc(100% + 6px);
@@ -294,18 +279,16 @@
       font-weight: 500;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      opacity: 0.78;
+      opacity: 0.74;
       pointer-events: none;
     }
 
-    .date-node:hover,
-    .date-node:focus-visible,
-    .date-node[aria-expanded="true"] {
+    .wheel-node:not(.is-active)::after { opacity: 0; }
+
+    .wheel-node:hover,
+    .wheel-node:focus-visible {
       outline: none;
-      box-shadow:
-        0 0 0 6px rgba(47, 91, 255, 0.12),
-        0 0 30px rgba(255, 79, 163, 0.48),
-        0 0 42px rgba(47, 91, 255, 0.34);
+      box-shadow: 0 0 0 7px rgba(47, 91, 255, 0.12), 0 0 34px rgba(255, 79, 163, 0.50), 0 0 46px rgba(47, 91, 255, 0.34);
     }
 
     .date-tooltip {
@@ -330,7 +313,7 @@
       visibility: hidden;
       pointer-events: none;
       transition: 160ms ease;
-      z-index: 9;
+      z-index: 60;
     }
 
     .date-tooltip::after {
@@ -346,57 +329,47 @@
       border-bottom: 1px solid rgba(244, 247, 255, 0.14);
     }
 
-    .date-node:hover .date-tooltip,
-    .date-node:focus-visible .date-tooltip {
+    .wheel-node:hover .date-tooltip,
+    .wheel-node:focus-visible .date-tooltip {
       opacity: 1;
       visibility: visible;
       transform: translateX(-50%) translateY(0);
     }
 
-    .card-slot {
-      display: none;
-      min-width: 0;
+    .active-card-slot {
+      position: absolute;
+      top: 50%;
+      width: min(42%, 430px);
+      transform: translateY(-50%);
+      z-index: 10;
+      pointer-events: auto;
     }
 
-    .event.is-active .card-slot {
-      display: block;
-    }
-
-    .card-slot.left {
-      grid-column: 1;
-      grid-row: 1;
-    }
-
-    .card-slot.right {
-      grid-column: 3;
-      grid-row: 1;
-    }
+    .active-card-slot.left { left: 0; }
+    .active-card-slot.right { right: 0; }
 
     .experience-card {
       width: 100%;
+      max-height: 430px;
+      overflow: hidden;
       border: 1px solid rgba(244, 247, 255, 0.13);
       border-radius: var(--radius);
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018)),
-        var(--panel);
+      background: linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018)), var(--panel);
       box-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
       padding: 16px;
-      overflow: hidden;
       opacity: 0;
-      transform: translateX(var(--card-offset, 0));
-      animation: cardIn 260ms cubic-bezier(.2,.8,.2,1) forwards;
+      transform: translateX(var(--card-offset, 0)) scale(0.96);
+      animation: cardIn 280ms cubic-bezier(.2,.8,.2,1) forwards;
       transition: 180ms ease;
       position: relative;
     }
 
-    .card-slot.left .experience-card { --card-offset: -14px; }
-    .card-slot.right .experience-card { --card-offset: 14px; }
+    .active-card-slot.left .experience-card { --card-offset: -16px; }
+    .active-card-slot.right .experience-card { --card-offset: 16px; }
 
     .experience-card:hover {
       border-color: var(--branch-color);
-      box-shadow:
-        0 20px 58px rgba(0, 0, 0, 0.44),
-        0 0 24px rgba(255, 79, 163, 0.18);
+      box-shadow: 0 20px 58px rgba(0, 0, 0, 0.44), 0 0 24px rgba(255, 79, 163, 0.18);
     }
 
     .experience-card::before {
@@ -409,14 +382,11 @@
       box-shadow: 0 0 20px var(--branch-color);
     }
 
-    .card-slot.left .experience-card::before { right: 0; }
-    .card-slot.right .experience-card::before { left: 0; }
+    .active-card-slot.left .experience-card::before { right: 0; }
+    .active-card-slot.right .experience-card::before { left: 0; }
 
     @keyframes cardIn {
-      to {
-        opacity: 1;
-        transform: translateX(0);
-      }
+      to { opacity: 1; transform: translateX(0) scale(1); }
     }
 
     .card-top {
@@ -485,51 +455,12 @@
     .card-image {
       display: block;
       width: 100%;
-      height: 150px;
+      height: 140px;
       object-fit: cover;
       border-radius: 14px;
       border: 1px solid rgba(244, 247, 255, 0.12);
       background: rgba(255,255,255,0.04);
       box-shadow: 0 10px 28px rgba(0,0,0,0.20);
-    }
-
-    .image-placeholder {
-      width: 100%;
-      min-height: 130px;
-      border-radius: 14px;
-      border: 1.5px dashed rgba(255, 79, 163, 0.38);
-      background:
-        linear-gradient(135deg, rgba(47, 91, 255, 0.12), rgba(255, 79, 163, 0.12)),
-        rgba(255,255,255,0.02);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      text-align: center;
-      padding: 16px;
-      color: #C9D2FF;
-    }
-
-    .image-placeholder span {
-      font-weight: 800;
-      font-size: 14px;
-      letter-spacing: 0.02em;
-    }
-
-    .image-placeholder small {
-      display: block;
-      max-width: 250px;
-      line-height: 1.5;
-      color: var(--muted);
-    }
-
-    .image-placeholder code {
-      font-family: var(--mono);
-      color: #F4F7FF;
-      background: rgba(255,255,255,0.06);
-      padding: 2px 6px;
-      border-radius: 6px;
     }
 
     .commands {
@@ -549,6 +480,38 @@
       color: var(--et-magenta);
     }
 
+    .wheel-controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 18px;
+      position: relative;
+      z-index: 12;
+    }
+
+    .wheel-btn {
+      appearance: none;
+      border: 1px solid rgba(244, 247, 255, 0.14);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 9px 12px;
+      cursor: pointer;
+      transition: 160ms ease;
+    }
+
+    .wheel-btn:hover:not(:disabled) {
+      border-color: rgba(255, 79, 163, 0.6);
+      background: rgba(255, 79, 163, 0.12);
+    }
+
+    .wheel-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
     .footer {
       padding: 14px clamp(18px, 5vw, 56px) 22px;
       border-top: 1px solid rgba(244, 247, 255, 0.09);
@@ -564,25 +527,11 @@
       body { padding: 10px; }
       .hero { padding-bottom: 0; }
       .timeline { padding-left: 14px; padding-right: 14px; }
+      .timeline-canvas { --center-x: 34px; height: 520px; }
+      .wheel-backplate { left: 34px; width: 120px; }
       .main-line { left: 34px; }
-      .timeline-list { gap: 6px; }
-      .event,
-      .event.is-active {
-        display: grid;
-        grid-template-columns: 68px minmax(0, 1fr);
-        gap: 14px;
-        min-height: 76px;
-        padding: 18px 0;
-        align-items: center;
-      }
-      .event.is-active { min-height: 320px; }
-      .date-node {
-        grid-column: 1;
-        width: 68px;
-        height: 34px;
-        font-size: 11px;
-      }
-      .date-node::after { display: none; }
+      .wheel-node { width: 68px; height: 34px; font-size: 11px; }
+      .wheel-node::after { display: none; }
       .date-tooltip {
         left: calc(100% + 12px);
         bottom: 50%;
@@ -597,17 +546,18 @@
         border-left: 1px solid rgba(244, 247, 255, 0.14);
         border-bottom: 1px solid rgba(244, 247, 255, 0.14);
       }
-      .date-node:hover .date-tooltip,
-      .date-node:focus-visible .date-tooltip {
+      .wheel-node:hover .date-tooltip,
+      .wheel-node:focus-visible .date-tooltip {
         transform: translateY(50%) translateX(0);
       }
-      .card-slot.left,
-      .card-slot.right {
-        grid-column: 2;
-        grid-row: 1;
+      .active-card-slot.left,
+      .active-card-slot.right {
+        left: 82px;
+        right: auto;
+        width: calc(100% - 82px);
       }
-      .card-slot.left .experience-card::before,
-      .card-slot.right .experience-card::before {
+      .active-card-slot.left .experience-card::before,
+      .active-card-slot.right .experience-card::before {
         left: 0;
         right: auto;
       }
@@ -620,20 +570,18 @@
       .terminal-head > span:last-child { display: none; }
       .hero { padding-left: 14px; padding-right: 14px; }
       .timeline { padding-left: 10px; padding-right: 10px; }
+      .timeline-canvas { --center-x: 28px; height: 500px; }
       .main-line { left: 28px; }
-      .event,
-      .event.is-active {
-        grid-template-columns: 56px minmax(0, 1fr);
-        gap: 10px;
-      }
-      .date-node {
-        width: 56px;
-        height: 30px;
+      .wheel-backplate { left: 28px; width: 100px; }
+      .wheel-node { width: 56px; height: 30px; }
+      .active-card-slot.left,
+      .active-card-slot.right {
+        left: 66px;
+        width: calc(100% - 66px);
       }
       .experience-card { padding: 14px; }
       .card-top { font-size: 10px; }
-      .card-image,
-      .image-placeholder { height: 125px; min-height: 125px; }
+      .card-image { height: 112px; }
     }
   </style>
 </head>
@@ -655,14 +603,21 @@
         <strong>matys@bieche</strong>:<span>~/chronologie</span>$ git log --graph --merges --timeline<span class="cursor"></span>
       </p>
       <h1>Chronologie de ma vie</h1>
-      <p class="subtitle"></p>
+      <!-- <p class="subtitle">Clique sur une date visible pour la placer au centre. La frise reste centrale, et la carte active alterne gauche / droite.</p> -->
     </section>
 
     <section class="timeline">
       <div class="timeline-canvas" id="timelineCanvas">
+        <div class="wheel-backplate" aria-hidden="true"></div>
         <div class="main-line" aria-hidden="true"></div>
         <svg class="merge-svg" id="mergeSvg" aria-hidden="true"></svg>
-        <div class="timeline-list" id="eventsLayer"></div>
+        <div id="activeCardLayer"></div>
+        <div id="wheelLayer"></div>
+      </div>
+
+      <div class="wheel-controls" aria-label="Navigation de la timeline">
+        <button class="wheel-btn" id="prevBtn" type="button">← précédent</button>
+        <button class="wheel-btn" id="nextBtn" type="button">suivant →</button>
       </div>
     </section>
 
@@ -673,332 +628,223 @@
 
   <script>
     const experiences = [
-      {
-        date: "2002",
-        title: "Naissance à l'île de La Réunion",
-        company: "Origines",
-        branch: "origin/reunion",
-        color: "#2F5BFF",
-        tag: "origin",
-        hash: "2002a01",
-        image: "",
-        description: "Né à l'île de La Réunion. Point de départ d'un parcours construit entre sciences, ingénierie, robotique et création.",
-        commands: ["git init life", "git commit -m 'birth at La Réunion'"]
-      },
-      {
-        date: "2020",
-        title: "Baccalauréat scientifique & Abitur",
-        company: "Formation académique",
-        branch: "education/high-school",
-        color: "#FF4FA3",
-        tag: "diploma",
-        hash: "2020bsc",
-        image: "",
-        description: "Obtention du baccalauréat scientifique et de l'Abitur, avec une base académique orientée sciences et exigence internationale.",
-        commands: ["git checkout -b education/high-school", "git commit -m 'scientific baccalaureate + Abitur'"]
-      },
-      {
-        date: "2023",
-        title: "Fin de classe préparatoire MPSI / MP",
-        company: "Classes préparatoires",
-        branch: "education/cpge",
-        color: "#8D5CFF",
-        tag: "cpge",
-        hash: "2023mps",
-        image: "",
-        description: "Fin du cursus en classes préparatoires MPSI puis MP, avec consolidation d'une base scientifique, mathématique et physique exigeante.",
-        commands: ["git checkout -b education/cpge", "git commit -m 'complete MPSI MP'"]
-      },
-      {
-        date: "2023",
-        title: "Entrée à SeaTech Toulon",
-        company: "École d'ingénieur",
-        branch: "education/seatech",
-        color: "#2F5BFF",
-        tag: "engineering",
-        hash: "2023sea",
-        image: "",
-        description: "Entrée en école d'ingénieur à SeaTech Toulon, avec une trajectoire orientée systèmes, robotique et projets techniques.",
-        commands: ["git checkout -b education/seatech", "git merge education/cpge"]
-      },
-      {
-        date: "2023",
-        title: "Entrée au Robot Club de Toulon",
-        company: "Robot Club Toulon",
-        branch: "robotics/club",
-        color: "#FF4FA3",
-        tag: "robotics",
-        hash: "2023rct",
-        image: "",
-        description: "Intégration du Robot Club de Toulon, avec engagement dans des projets robotiques collectifs et compétitifs.",
-        commands: ["git checkout -b robotics/club", "git commit -m 'join Robot Club Toulon'"]
-      },
-      {
-        date: "2023",
-        title: "Dassault UAV Challenge",
-        company: "Compétition robotique / aéronautique",
-        branch: "robotics/uav",
-        color: "#8D5CFF",
-        tag: "challenge",
-        hash: "2023uav",
-        image: "",
-        description: "Participation au Dassault UAV Challenge, avec travail sur des problématiques de systèmes autonomes, drones et ingénierie collaborative.",
-        commands: ["git checkout -b robotics/uav", "git commit -m 'Dassault UAV Challenge'"]
-      },
-      {
-        date: "2023",
-        title: "2e place au concours de la nouvelle",
-        company: "Concours d'écriture",
-        branch: "writing/competition",
-        color: "#2F5BFF",
-        tag: "2nd place",
-        hash: "2023wri",
-        image: "",
-        description: "Obtention de la 2e place au concours de la nouvelle, à l'intersection entre rigueur scientifique et créativité littéraire.",
-        commands: ["git checkout -b writing/competition", "git commit -m '2nd place short story competition'"]
-      },
-      {
-        date: "2024",
-        title: "Participation à la RoboCup 2024",
-        company: "Robot Club Toulon / RoboCup",
-        branch: "robotics/robocup",
-        color: "#FF4FA3",
-        tag: "robocup",
-        hash: "2024rcp",
-        image: "",
-        description: "Participation à la RoboCup 2024 dans un cadre d'ingénierie robotique compétitive, avec mise en pratique sur des systèmes autonomes.",
-        commands: ["git checkout -b robotics/robocup", "git merge robotics/club"]
-      },
-      {
-        date: "2025",
-        title: "1re place au concours de la nouvelle",
-        company: "Concours d'écriture",
-        branch: "writing/award",
-        color: "#8D5CFF",
-        tag: "1st place",
-        hash: "2025nvl",
-        image: "",
-        description: "Obtention de la 1re place au concours de la nouvelle, confirmant une progression forte sur le versant rédactionnel et narratif.",
-        commands: ["git checkout -b writing/award", "git commit -m '1st place short story competition'"]
-      },
-      {
-        date: "2025",
-        title: "Stage au Japon sur un robot poisson",
-        company: "Tokyo University of Science",
-        branch: "robotics/fish-robot",
-        color: "#2F5BFF",
-        tag: "internship",
-        hash: "2025jpn",
-        image: "",
-        description: "Stage à Tokyo University of Science au Japon autour d'un robot poisson, à l'interface entre robotique bio-inspirée, recherche appliquée et expérimentation.",
-        commands: ["git checkout -b robotics/fish-robot", "git commit -m 'Tokyo University of Science internship'"]
-      },
-      {
-        date: "2025",
-        title: "Entrée à l'ENSTA en double diplôme",
-        company: "ENSTA",
-        branch: "education/ensta",
-        color: "#FF4FA3",
-        tag: "double degree",
-        hash: "2025ens",
-        image: "",
-        description: "Entrée à l'ENSTA dans le cadre d'un double diplôme, en continuité d'un parcours d'ingénierie à forte densité scientifique et technologique.",
-        commands: ["git checkout -b education/ensta", "git merge education/seatech"]
-      },
-      {
-        date: "2025",
-        title: "Projet robot poisson",
-        company: "Projet robotique",
-        branch: "project/fish-robot",
-        color: "#8D5CFF",
-        tag: "project",
-        hash: "2025fsh",
-        image: "",
-        description: "Développement et approfondissement d'un projet de robot poisson, dans la continuité du stage au Japon et des travaux en robotique bio-inspirée.",
-        commands: ["git checkout -b project/fish-robot", "git merge robotics/fish-robot"]
-      },
-      {
-        date: "2026",
-        title: "Professeur — Cours de ROS",
-        company: "Transmission / pédagogie",
-        branch: "teaching/ros",
-        color: "#2F5BFF",
-        tag: "teaching",
-        hash: "2026ros",
-        image: "",
-        description: "Enseignement de cours de ROS, avec transmission de compétences en architecture logicielle robotique, middleware et développement de systèmes autonomes.",
-        commands: ["git checkout -b teaching/ros", "git commit -m 'teach ROS courses'"]
-      },
-      {
-        date: "2026",
-        title: "Jury du concours de la nouvelle CROUS",
-        company: "CROUS",
-        branch: "writing/jury",
-        color: "#FF4FA3",
-        tag: "jury",
-        hash: "2026crs",
-        image: "",
-        description: "Participation comme jury au concours de la nouvelle du CROUS, avec un rôle d'évaluation et de sélection de productions littéraires.",
-        commands: ["git checkout -b writing/jury", "git merge writing/award"]
-      },
-      {
-        date: "2026",
-        title: "Coupe de France de Robotique",
-        company: "Compétition robotique",
-        branch: "robotics/france-cup",
-        color: "#8D5CFF",
-        tag: "competition",
-        hash: "2026cdf",
-        image: "",
-        description: "Participation à la Coupe de France de Robotique, dans la continuité d'un parcours fortement ancré dans la robotique compétitive.",
-        commands: ["git checkout -b robotics/france-cup", "git merge robotics/robocup"]
-      }
+      { date: `2002`, title: `Naissance à l’île de La Réunion`, company: `Origines`, branch: `origin/reunion`, color: `#2F5BFF`, tag: `origin`, hash: `2002a01`, image: `sous-les-cocotiers.webp`, description: `Né à l’île de La Réunion. Point de départ d’un parcours construit entre sciences, ingénierie, robotique et création.`, commands: [`git init life`, `git commit -m 'birth at La Réunion'`] },
+      { date: `2020`, title: `Baccalauréat scientifique & Abitur`, company: `Formation académique`, branch: `education/high-school`, color: `#FF4FA3`, tag: `diploma`, hash: `2020bsc`, image: ``, description: `Obtention du baccalauréat scientifique et de l’Abitur, avec une base académique orientée sciences et exigence internationale.`, commands: [`git checkout -b education/high-school`, `git commit -m 'scientific baccalaureate + Abitur'`] },
+      { date: `2023`, title: `Fin de classe préparatoire MPSI / MP`, company: `Classes préparatoires`, branch: `education/cpge`, color: `#8D5CFF`, tag: `cpge`, hash: `2023mps`, image: ``, description: `Fin du cursus en classes préparatoires MPSI puis MP, avec consolidation d’une base scientifique, mathématique et physique exigeante.`, commands: [`git checkout -b education/cpge`, `git commit -m 'complete MPSI MP'`] },
+      { date: `2023`, title: `Entrée à SeaTech Toulon`, company: `École d’ingénieur`, branch: `education/seatech`, color: `#2F5BFF`, tag: `engineering`, hash: `2023sea`, image: ``, description: `Entrée en école d’ingénieur à SeaTech Toulon, avec une trajectoire orientée systèmes, robotique et projets techniques.`, commands: [`git checkout -b education/seatech`, `git merge education/cpge`] },
+      { date: `2023`, title: `Entrée au Robot Club de Toulon`, company: `Robot Club Toulon`, branch: `robotics/club`, color: `#FF4FA3`, tag: `robotics`, hash: `2023rct`, image: ``, description: `Intégration du Robot Club de Toulon, avec engagement dans des projets robotiques collectifs et compétitifs.`, commands: [`git checkout -b robotics/club`, `git commit -m 'join Robot Club Toulon'`] },
+      { date: `2023`, title: `Dassault UAV Challenge`, company: `Compétition robotique / aéronautique`, branch: `robotics/uav`, color: `#8D5CFF`, tag: `challenge`, hash: `2023uav`, image: ``, description: `Participation au Dassault UAV Challenge, avec travail sur des problématiques de systèmes autonomes, drones et ingénierie collaborative.`, commands: [`git checkout -b robotics/uav`, `git commit -m 'Dassault UAV Challenge'`] },
+      { date: `2023`, title: `2e place au concours de la nouvelle`, company: `Concours d’écriture`, branch: `writing/competition`, color: `#2F5BFF`, tag: `2nd place`, hash: `2023wri`, image: ``, description: `Obtention de la 2e place au concours de la nouvelle, à l’intersection entre rigueur scientifique et créativité littéraire.`, commands: [`git checkout -b writing/competition`, `git commit -m '2nd place short story competition'`] },
+      { date: `2024`, title: `Participation à la RoboCup 2024`, company: `Robot Club Toulon / RoboCup`, branch: `robotics/robocup`, color: `#FF4FA3`, tag: `robocup`, hash: `2024rcp`, image: ``, description: `Participation à la RoboCup 2024 dans un cadre d’ingénierie robotique compétitive, avec mise en pratique sur des systèmes autonomes.`, commands: [`git checkout -b robotics/robocup`, `git merge robotics/club`] },
+      { date: `2025`, title: `1re place au concours de la nouvelle`, company: `Concours d’écriture`, branch: `writing/award`, color: `#8D5CFF`, tag: `1st place`, hash: `2025nvl`, image: ``, description: `Obtention de la 1re place au concours de la nouvelle, confirmant une progression forte sur le versant rédactionnel et narratif.`, commands: [`git checkout -b writing/award`, `git commit -m '1st place short story competition'`] },
+      { date: `2025`, title: `Stage au Japon sur un robot poisson`, company: `Tokyo University of Science`, branch: `robotics/fish-robot`, color: `#2F5BFF`, tag: `internship`, hash: `2025jpn`, image: ``, description: `Stage à Tokyo University of Science au Japon autour d’un robot poisson, à l’interface entre robotique bio-inspirée, recherche appliquée et expérimentation.`, commands: [`git checkout -b robotics/fish-robot`, `git commit -m 'Tokyo University of Science internship'`] },
+      { date: `2025`, title: `Entrée à l’ENSTA en double diplôme`, company: `ENSTA`, branch: `education/ensta`, color: `#FF4FA3`, tag: `double degree`, hash: `2025ens`, image: ``, description: `Entrée à l’ENSTA dans le cadre d’un double diplôme, en continuité d’un parcours d’ingénierie à forte densité scientifique et technologique.`, commands: [`git checkout -b education/ensta`, `git merge education/seatech`] },
+      { date: `2025`, title: `Projet robot poisson`, company: `Projet robotique`, branch: `project/fish-robot`, color: `#8D5CFF`, tag: `project`, hash: `2025fsh`, image: ``, description: `Développement et approfondissement d’un projet de robot poisson, dans la continuité du stage au Japon et des travaux en robotique bio-inspirée.`, commands: [`git checkout -b project/fish-robot`, `git merge robotics/fish-robot`] },
+      { date: `2026`, title: `Professeur — Cours de ROS`, company: `Transmission / pédagogie`, branch: `teaching/ros`, color: `#2F5BFF`, tag: `teaching`, hash: `2026ros`, image: ``, description: `Enseignement de cours de ROS, avec transmission de compétences en architecture logicielle robotique, middleware et développement de systèmes autonomes.`, commands: [`git checkout -b teaching/ros`, `git commit -m 'teach ROS courses'`] },
+      { date: `2026`, title: `Jury du concours de la nouvelle CROUS`, company: `CROUS`, branch: `writing/jury`, color: `#FF4FA3`, tag: `jury`, hash: `2026crs`, image: ``, description: `Participation comme jury au concours de la nouvelle du CROUS, avec un rôle d’évaluation et de sélection de productions littéraires.`, commands: [`git checkout -b writing/jury`, `git merge writing/award`] },
+      { date: `2026`, title: `Coupe de France de Robotique`, company: `Compétition robotique`, branch: `robotics/france-cup`, color: `#8D5CFF`, tag: `competition`, hash: `2026cdf`, image: ``, description: `Participation à la Coupe de France de Robotique, dans la continuité d’un parcours fortement ancré dans la robotique compétitive.`, commands: [`git checkout -b robotics/france-cup`, `git merge robotics/robocup`] }
     ];
 
-    const timelineCanvas = document.getElementById("timelineCanvas");
-    const mergeSvg = document.getElementById("mergeSvg");
-    const eventsLayer = document.getElementById("eventsLayer");
+    const timelineCanvas = document.getElementById(`timelineCanvas`);
+    const mergeSvg = document.getElementById(`mergeSvg`);
+    const wheelLayer = document.getElementById(`wheelLayer`);
+    const activeCardLayer = document.getElementById(`activeCardLayer`);
+    const prevBtn = document.getElementById(`prevBtn`);
+    const nextBtn = document.getElementById(`nextBtn`);
 
-    let activeIndex = null;
+    let activeIndex = 0;
+    let previousIndex = 0;
+    let wheelNodes = [];
 
     function isMobile() {
       return window.innerWidth <= 780;
     }
 
     function sideFor(index) {
-      if (isMobile()) return "right";
-      return index % 2 === 0 ? "left" : "right";
+      if (isMobile()) return `right`;
+      return index % 2 === 0 ? `left` : `right`;
     }
 
-    function getMediaMarkup(item) {
-      if (item.image) {
-        return `<img src="${item.image}" alt="${item.title}" class="card-image" loading="lazy" />`;
-      }
+    function mediaMarkup(item) {
+      if (!item.image) return ``;
 
       return `
-        <div class="image-placeholder">
-          <span>Image</span>
-          <small>Ajoute une URL dans <code>image: "..."</code></small>
+        <div class="card-media">
+          <img src="${item.image}" alt="${item.title}" class="card-image" loading="lazy" />
+        </div>
+      `;
+    }
+
+    function wheelStyle(delta) {
+      const abs = Math.abs(delta);
+      const sign = Math.sign(delta) || 1;
+      const step = isMobile() ? 76 : 90;
+
+      if (abs === 0) {
+        return { y: 0, z: 130, scale: 1, opacity: 1, blur: 0, rotate: 0, zIndex: 40, hidden: false };
+      }
+
+      if (abs === 1) {
+        return { y: sign * step, z: 38, scale: 0.82, opacity: 0.7, blur: 0, rotate: sign * -22, zIndex: 30, hidden: false };
+      }
+
+      if (abs === 2) {
+        return { y: sign * step * 1.68, z: -82, scale: 0.62, opacity: 0.36, blur: 0.45, rotate: sign * -42, zIndex: 20, hidden: false };
+      }
+
+      if (abs === 3) {
+        return { y: sign * step * 2.18, z: -210, scale: 0.44, opacity: 0.13, blur: 0.9, rotate: sign * -58, zIndex: 10, hidden: false };
+      }
+
+      return { y: sign * step * 2.65, z: -330, scale: 0.28, opacity: 0, blur: 1.6, rotate: sign * -72, zIndex: 0, hidden: true };
+    }
+
+    function cardMarkup(item, side, color) {
+      return `
+        <div class="active-card-slot ${side}">
+          <div class="experience-card" style="--branch-color:${color}">
+            <div class="card-top">
+              <span class="branch">${item.branch}</span>
+              <span class="hash">${item.hash}</span>
+              <span class="tag">${item.tag}</span>
+            </div>
+            <h2>${item.title}</h2>
+            <p class="company">${item.company}</p>
+            ${mediaMarkup(item)}
+            <p class="description">${item.description}</p>
+            <div class="commands">${(item.commands || []).map(command => `<span>${command}</span>`).join(``)}</div>
+          </div>
         </div>
       `;
     }
 
     function createSvgPath(d, color) {
-      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("d", d);
-      path.classList.add("merge-path");
-      path.style.setProperty("--branch-color", color);
+      const path = document.createElementNS(`http://www.w3.org/2000/svg`, `path`);
+      path.setAttribute(`d`, d);
+      path.classList.add(`merge-path`);
+      path.style.setProperty(`--branch-color`, color);
       mergeSvg.appendChild(path);
-
       const length = Math.ceil(path.getTotalLength());
-      path.style.setProperty("--path-length", length);
+      path.style.setProperty(`--path-length`, length);
     }
 
     function drawActiveMergePath() {
-      mergeSvg.innerHTML = "";
+      mergeSvg.innerHTML = ``;
 
-      if (activeIndex === null) return;
-
-      const activeRow = eventsLayer.querySelector(`[data-index="${activeIndex}"]`);
-      if (!activeRow) return;
-
-      const card = activeRow.querySelector(".experience-card");
-      const dateNode = activeRow.querySelector(".date-node");
+      const card = activeCardLayer.querySelector(`.experience-card`);
+      const dateNode = wheelLayer.querySelector(`.wheel-node.is-active`);
       if (!card || !dateNode) return;
 
       const canvasRect = timelineCanvas.getBoundingClientRect();
       const cardRect = card.getBoundingClientRect();
       const dateRect = dateNode.getBoundingClientRect();
       const side = sideFor(activeIndex);
-
       const y = dateRect.top + dateRect.height / 2 - canvasRect.top;
       const dateX = dateRect.left + dateRect.width / 2 - canvasRect.left;
       const cardX = isMobile()
         ? cardRect.left - canvasRect.left
-        : side === "left"
+        : side === `left`
           ? cardRect.right - canvasRect.left
           : cardRect.left - canvasRect.left;
-
       const controlOffset = isMobile() ? 34 : 86;
-      const c1 = side === "left" ? cardX + controlOffset : cardX - controlOffset;
-      const c2 = side === "left" ? dateX - controlOffset : dateX + controlOffset;
-
+      const c1 = side === `left` ? cardX + controlOffset : cardX - controlOffset;
+      const c2 = side === `left` ? dateX - controlOffset : dateX + controlOffset;
       const d = `M ${cardX} ${y} C ${c1} ${y}, ${c2} ${y}, ${dateX} ${y}`;
-      const color = experiences[activeIndex].color || (activeIndex % 2 === 0 ? "#2F5BFF" : "#FF4FA3");
-
+      const color = experiences[activeIndex].color || (activeIndex % 2 === 0 ? `#2F5BFF` : `#FF4FA3`);
       createSvgPath(d, color);
     }
 
-    function render() {
-      eventsLayer.innerHTML = "";
-      mergeSvg.innerHTML = "";
-
-      experiences.forEach((item, index) => {
-        const side = sideFor(index);
-        const color = item.color || (index % 2 === 0 ? "#2F5BFF" : "#FF4FA3");
-        const isActive = activeIndex === index;
-
-        const event = document.createElement("article");
-        event.className = `event ${isActive ? "is-active" : ""}`;
-        event.dataset.index = String(index);
-        event.style.setProperty("--branch-color", color);
-
-        event.innerHTML = `
-          <button class="date-node" type="button" aria-expanded="${isActive}" aria-label="${item.date} — ${item.title}">
-            ${item.date}
-            <span class="date-tooltip">${item.title}</span>
-          </button>
-
-          <div class="card-slot ${side}">
-            <div class="experience-card" style="--branch-color:${color}">
-              <div class="card-top">
-                <span class="branch">${item.branch}</span>
-                <span class="hash">${item.hash}</span>
-                <span class="tag">${item.tag}</span>
-              </div>
-
-              <h2>${item.title}</h2>
-              <p class="company">${item.company}</p>
-
-              <div class="card-media">
-                ${getMediaMarkup(item)}
-              </div>
-
-              <p class="description">${item.description}</p>
-
-              <div class="commands">
-                ${(item.commands || []).map(command => `<span>${command}</span>`).join("")}
-              </div>
-            </div>
-          </div>
-        `;
-
-        event.querySelector(".date-node").addEventListener("click", () => {
-          activeIndex = activeIndex === index ? null : index;
-          render();
-
-          requestAnimationFrame(() => {
-            const openedRow = eventsLayer.querySelector(`[data-index="${index}"]`);
-            if (activeIndex === index && openedRow) {
-              openedRow.scrollIntoView({ behavior: "smooth", block: "center" });
-            }
-          });
-        });
-
-        eventsLayer.appendChild(event);
+    function mountWheel() {
+      wheelLayer.innerHTML = ``;
+      wheelNodes = experiences.map((item, index) => {
+        const node = document.createElement(`button`);
+        node.type = `button`;
+        node.className = `wheel-node`;
+        node.setAttribute(`aria-label`, `${item.date} — ${item.title}`);
+        node.innerHTML = `${item.date}<span class="date-tooltip">${item.title}</span>`;
+        node.addEventListener(`click`, () => setActive(index));
+        wheelLayer.appendChild(node);
+        return node;
       });
+    }
 
+    function updateWheel() {
+      wheelNodes.forEach((node, index) => {
+        const delta = index - activeIndex;
+        const metrics = wheelStyle(delta);
+        const item = experiences[index];
+        const color = item.color || (index % 2 === 0 ? `#2F5BFF` : `#FF4FA3`);
+
+        node.classList.toggle(`is-active`, index === activeIndex);
+        node.classList.toggle(`is-hidden`, metrics.hidden);
+        node.setAttribute(`aria-expanded`, index === activeIndex ? `true` : `false`);
+        node.style.setProperty(`--branch-color`, color);
+        node.style.setProperty(`--wheel-y`, `${metrics.y}px`);
+        node.style.setProperty(`--wheel-z`, `${metrics.z}px`);
+        node.style.setProperty(`--wheel-scale`, metrics.scale);
+        node.style.setProperty(`--wheel-opacity`, metrics.opacity);
+        node.style.setProperty(`--wheel-blur`, `${metrics.blur}px`);
+        node.style.setProperty(`--wheel-rotate`, `${metrics.rotate}deg`);
+        node.style.setProperty(`--wheel-z-index`, metrics.zIndex);
+      });
+    }
+
+    function renderCard() {
+      const active = experiences[activeIndex];
+      const side = sideFor(activeIndex);
+      const color = active.color || (activeIndex % 2 === 0 ? `#2F5BFF` : `#FF4FA3`);
+      activeCardLayer.innerHTML = cardMarkup(active, side, color);
+    }
+
+    function updateControls() {
+      prevBtn.disabled = activeIndex === 0;
+      nextBtn.disabled = activeIndex === experiences.length - 1;
+    }
+
+    function setActive(index) {
+      const nextIndex = Math.max(0, Math.min(experiences.length - 1, index));
+      if (nextIndex === activeIndex) return;
+
+      previousIndex = activeIndex;
+      activeIndex = nextIndex;
+
+      updateWheel();
+      renderCard();
+      updateControls();
+      requestAnimationFrame(drawActiveMergePath);
+      window.setTimeout(drawActiveMergePath, 590);
+    }
+
+    function runRuntimeTests() {
+      console.assert(typeof wheelStyle === `function`, `wheelStyle must be defined`);
+      console.assert(wheelStyle(0).hidden === false, `active wheel node must be visible`);
+      console.assert(wheelStyle(1).y > 0, `next wheel node must be below the active node`);
+      console.assert(wheelStyle(-1).y < 0, `previous wheel node must be above the active node`);
+      console.assert(mediaMarkup({ image: `` }) === ``, `empty image must render no media block`);
+    }
+
+    function render() {
+      if (!wheelNodes.length) mountWheel();
+      updateWheel();
+      renderCard();
+      updateControls();
       requestAnimationFrame(drawActiveMergePath);
     }
 
+    prevBtn.addEventListener(`click`, () => setActive(activeIndex - 1));
+    nextBtn.addEventListener(`click`, () => setActive(activeIndex + 1));
+
     let resizeTimer;
-    window.addEventListener("resize", () => {
+    window.addEventListener(`resize`, () => {
       window.clearTimeout(resizeTimer);
       resizeTimer = window.setTimeout(() => {
-        render();
+        renderCard();
+        updateWheel();
+        requestAnimationFrame(drawActiveMergePath);
       }, 120);
     });
 
+    runRuntimeTests();
     render();
   </script>
 </body>
