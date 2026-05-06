@@ -8,7 +8,7 @@
   <style>
     :root {
       --bg: #050616;
-      --panel: rgba(8, 10, 26, 0.88);
+      --panel: rgba(8, 10, 26, 0.92);
       --text: #F4F7FF;
       --muted: #9EA8D6;
       --et-blue: #2F5BFF;
@@ -27,12 +27,14 @@
     body {
       margin: 0;
       min-height: 100%;
-      background: transparent;
+      background: transparent !important;
       color: var(--text);
       font-family: var(--sans);
     }
 
-    body { padding: 16px; }
+    body {
+      padding: 16px;
+    }
 
     .git-widget {
       width: min(100%, 1120px);
@@ -57,7 +59,7 @@
         linear-gradient(rgba(255,255,255,0.022) 50%, rgba(0,0,0,0.035) 50%),
         linear-gradient(90deg, rgba(255,0,0,0.014), rgba(0,255,0,0.008), rgba(0,0,255,0.014));
       background-size: 100% 4px, 6px 100%;
-      opacity: 0.38;
+      opacity: 0.32;
       mix-blend-mode: screen;
       z-index: 10;
     }
@@ -149,6 +151,7 @@
     .subtitle {
       margin: 16px 0 0;
       max-width: 760px;
+      min-height: 1px;
       color: #BEC6F5;
       font-size: clamp(14px, 2vw, 16px);
       line-height: 1.7;
@@ -161,17 +164,6 @@
 
     .timeline-canvas {
       position: relative;
-      min-height: var(--timeline-height, 980px);
-    }
-
-    .merge-svg {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: var(--timeline-height, 980px);
-      overflow: visible;
-      pointer-events: none;
-      z-index: 1;
     }
 
     .main-line {
@@ -217,6 +209,16 @@
     .main-line::before { top: 0; }
     .main-line::after { bottom: 0; }
 
+    .merge-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      pointer-events: none;
+      z-index: 1;
+    }
+
     .merge-path {
       fill: none;
       stroke: var(--branch-color);
@@ -224,30 +226,41 @@
       stroke-linecap: round;
       stroke-linejoin: round;
       filter: drop-shadow(0 0 8px var(--branch-color));
-      opacity: 0.9;
+      opacity: 0.92;
       stroke-dasharray: var(--path-length);
       stroke-dashoffset: var(--path-length);
-      animation: drawPath 900ms ease forwards;
-      animation-delay: var(--delay, 0ms);
+      animation: drawPath 650ms ease forwards;
     }
 
     @keyframes drawPath { to { stroke-dashoffset: 0; } }
 
-    .event {
-      position: absolute;
-      top: var(--y);
-      left: 0;
-      width: 100%;
-      min-height: 168px;
-      transform: translateY(-50%);
+    .timeline-list {
+      position: relative;
       z-index: 2;
+      display: grid;
+      gap: 14px;
+    }
+
+    .event {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 112px minmax(0, 1fr);
+      gap: 28px;
+      align-items: center;
+      min-height: 86px;
+      padding: 22px 0;
+      transition: min-height 220ms ease, padding 220ms ease;
+    }
+
+    .event.is-active {
+      min-height: 330px;
+      padding: 34px 0;
     }
 
     .date-node {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
+      position: relative;
+      grid-column: 2;
+      justify-self: center;
       width: 96px;
       height: 38px;
       display: grid;
@@ -265,7 +278,9 @@
       font-family: var(--mono);
       font-size: 13px;
       font-weight: 700;
-      z-index: 4;
+      cursor: pointer;
+      appearance: none;
+      z-index: 5;
     }
 
     .date-node::after {
@@ -280,13 +295,85 @@
       letter-spacing: 0.08em;
       text-transform: uppercase;
       opacity: 0.78;
+      pointer-events: none;
+    }
+
+    .date-node:hover,
+    .date-node:focus-visible,
+    .date-node[aria-expanded="true"] {
+      outline: none;
+      box-shadow:
+        0 0 0 6px rgba(47, 91, 255, 0.12),
+        0 0 30px rgba(255, 79, 163, 0.48),
+        0 0 42px rgba(47, 91, 255, 0.34);
+    }
+
+    .date-tooltip {
+      position: absolute;
+      bottom: calc(100% + 14px);
+      left: 50%;
+      width: max-content;
+      max-width: 280px;
+      transform: translateX(-50%) translateY(6px);
+      padding: 8px 11px;
+      border: 1px solid rgba(244, 247, 255, 0.14);
+      border-radius: 12px;
+      background: rgba(7, 9, 29, 0.96);
+      color: #F4F7FF;
+      box-shadow: 0 16px 38px rgba(0, 0, 0, 0.34);
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.25;
+      text-align: center;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: 160ms ease;
+      z-index: 9;
+    }
+
+    .date-tooltip::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      transform: translate(-50%, -5px) rotate(45deg);
+      background: rgba(7, 9, 29, 0.96);
+      border-right: 1px solid rgba(244, 247, 255, 0.14);
+      border-bottom: 1px solid rgba(244, 247, 255, 0.14);
+    }
+
+    .date-node:hover .date-tooltip,
+    .date-node:focus-visible .date-tooltip {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .card-slot {
+      display: none;
+      min-width: 0;
+    }
+
+    .event.is-active .card-slot {
+      display: block;
+    }
+
+    .card-slot.left {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .card-slot.right {
+      grid-column: 3;
+      grid-row: 1;
     }
 
     .experience-card {
-      position: absolute;
-      top: 50%;
-      width: min(42%, 430px);
-      transform: translateY(-50%);
+      width: 100%;
       border: 1px solid rgba(244, 247, 255, 0.13);
       border-radius: var(--radius);
       background:
@@ -296,26 +383,20 @@
       padding: 16px;
       overflow: hidden;
       opacity: 0;
-      animation: cardIn 520ms cubic-bezier(.2,.8,.2,1) forwards;
-      animation-delay: var(--delay, 0ms);
+      transform: translateX(var(--card-offset, 0));
+      animation: cardIn 260ms cubic-bezier(.2,.8,.2,1) forwards;
       transition: 180ms ease;
+      position: relative;
     }
+
+    .card-slot.left .experience-card { --card-offset: -14px; }
+    .card-slot.right .experience-card { --card-offset: 14px; }
 
     .experience-card:hover {
       border-color: var(--branch-color);
       box-shadow:
         0 20px 58px rgba(0, 0, 0, 0.44),
         0 0 24px rgba(255, 79, 163, 0.18);
-    }
-
-    .experience-card.left {
-      left: 0;
-      transform: translateY(-50%) translateX(-18px);
-    }
-
-    .experience-card.right {
-      right: 0;
-      transform: translateY(-50%) translateX(18px);
     }
 
     .experience-card::before {
@@ -328,13 +409,13 @@
       box-shadow: 0 0 20px var(--branch-color);
     }
 
-    .experience-card.left::before { right: 0; }
-    .experience-card.right::before { left: 0; }
+    .card-slot.left .experience-card::before { right: 0; }
+    .card-slot.right .experience-card::before { left: 0; }
 
     @keyframes cardIn {
       to {
         opacity: 1;
-        transform: translateY(-50%) translateX(0);
+        transform: translateX(0);
       }
     }
 
@@ -484,36 +565,72 @@
       .hero { padding-bottom: 0; }
       .timeline { padding-left: 14px; padding-right: 14px; }
       .main-line { left: 34px; }
-      .event { min-height: 230px; }
-      .date-node { left: 34px; width: 68px; height: 34px; font-size: 11px; }
-      .date-node::after { display: none; }
-      .experience-card,
-      .experience-card.left,
-      .experience-card.right {
-        left: 82px;
-        right: auto;
-        width: calc(100% - 82px);
+      .timeline-list { gap: 6px; }
+      .event,
+      .event.is-active {
+        display: grid;
+        grid-template-columns: 68px minmax(0, 1fr);
+        gap: 14px;
+        min-height: 76px;
+        padding: 18px 0;
+        align-items: center;
       }
-      .experience-card.left::before,
-      .experience-card.right::before { left: 0; right: auto; }
+      .event.is-active { min-height: 320px; }
+      .date-node {
+        grid-column: 1;
+        width: 68px;
+        height: 34px;
+        font-size: 11px;
+      }
+      .date-node::after { display: none; }
+      .date-tooltip {
+        left: calc(100% + 12px);
+        bottom: 50%;
+        transform: translateY(50%) translateX(-6px);
+        text-align: left;
+      }
+      .date-tooltip::after {
+        top: 50%;
+        left: -5px;
+        transform: translateY(-50%) rotate(45deg);
+        border: 0;
+        border-left: 1px solid rgba(244, 247, 255, 0.14);
+        border-bottom: 1px solid rgba(244, 247, 255, 0.14);
+      }
+      .date-node:hover .date-tooltip,
+      .date-node:focus-visible .date-tooltip {
+        transform: translateY(50%) translateX(0);
+      }
+      .card-slot.left,
+      .card-slot.right {
+        grid-column: 2;
+        grid-row: 1;
+      }
+      .card-slot.left .experience-card::before,
+      .card-slot.right .experience-card::before {
+        left: 0;
+        right: auto;
+      }
       .commands { display: none; }
     }
 
     @media (max-width: 460px) {
+      body { padding: 8px; }
       .terminal-head { height: 38px; font-size: 10px; }
       .terminal-head > span:last-child { display: none; }
       .hero { padding-left: 14px; padding-right: 14px; }
       .timeline { padding-left: 10px; padding-right: 10px; }
-      .main-line,
-      .date-node { left: 28px; }
-      .date-node { width: 56px; height: 30px; }
-      .experience-card,
-      .experience-card.left,
-      .experience-card.right {
-        left: 66px;
-        width: calc(100% - 66px);
-        padding: 14px;
+      .main-line { left: 28px; }
+      .event,
+      .event.is-active {
+        grid-template-columns: 56px minmax(0, 1fr);
+        gap: 10px;
       }
+      .date-node {
+        width: 56px;
+        height: 30px;
+      }
+      .experience-card { padding: 14px; }
       .card-top { font-size: 10px; }
       .card-image,
       .image-placeholder { height: 125px; min-height: 125px; }
@@ -522,7 +639,7 @@
 </head>
 
 <body>
-  <section class="git-widget" aria-label="Timeline professionnelle style Git merge">
+  <section class="git-widget" aria-label="Timeline">
     <header class="terminal-head">
       <span class="dots" aria-hidden="true">
         <span class="dot"></span>
@@ -535,25 +652,23 @@
 
     <section class="hero">
       <p class="prompt">
-        <strong>notion@portfolio</strong>:<span>~/career</span>$ git log --graph --merges --timeline<span class="cursor"></span>
+        <strong>matys@bieche</strong>:<span>~/chronologie</span>$ git log --graph --merges --timeline<span class="cursor"></span>
       </p>
-      <h1>Timeline Git Merge</h1>
-      <p class="subtitle">
-        La branche centrale représente le parcours principal. Chaque expérience arrive alternativement depuis la gauche ou la droite comme une branche Git qui se merge dans la timeline.
-      </p>
+      <h1>Chronologie de ma vie</h1>
+      <p class="subtitle"></p>
     </section>
 
     <section class="timeline">
       <div class="timeline-canvas" id="timelineCanvas">
         <div class="main-line" aria-hidden="true"></div>
         <svg class="merge-svg" id="mergeSvg" aria-hidden="true"></svg>
-        <div id="eventsLayer"></div>
+        <div class="timeline-list" id="eventsLayer"></div>
       </div>
     </section>
 
-    <footer class="footer">
+    <!-- <footer class="footer">
       Pour personnaliser : modifie le tableau <strong>experiences</strong>. Pour une image, renseigne <strong>image: "URL_DE_L_IMAGE"</strong>.
-    </footer>
+    </footer> -->
   </section>
 
   <script>
@@ -744,59 +859,15 @@
     const mergeSvg = document.getElementById("mergeSvg");
     const eventsLayer = document.getElementById("eventsLayer");
 
+    let activeIndex = null;
+
     function isMobile() {
       return window.innerWidth <= 780;
-    }
-
-    function getMetrics() {
-      const top = isMobile() ? 112 : 92;
-      const spacing = isMobile() ? 250 : 230;
-      const height = top * 2 + Math.max(0, experiences.length - 1) * spacing;
-      return { top, spacing, height };
-    }
-
-    function getY(index) {
-      const { top, spacing } = getMetrics();
-      return top + index * spacing;
     }
 
     function sideFor(index) {
       if (isMobile()) return "right";
       return index % 2 === 0 ? "left" : "right";
-    }
-
-    function makePath({ side, y }) {
-      const width = timelineCanvas.clientWidth;
-      const centerX = isMobile() ? (window.innerWidth <= 460 ? 28 : 34) : width / 2;
-
-      if (isMobile()) {
-        const startX = 82;
-        return `M ${startX} ${y} C 58 ${y}, 46 ${y}, ${centerX} ${y}`;
-      }
-
-      const cardWidth = Math.min(width * 0.42, 430);
-      const gap = 64;
-      const branchStartX = side === "left"
-        ? centerX - cardWidth - gap
-        : centerX + cardWidth + gap;
-      const endX = centerX;
-      const controlOffset = 92;
-      const c1 = side === "left" ? branchStartX + controlOffset : branchStartX - controlOffset;
-      const c2 = side === "left" ? endX - controlOffset : endX + controlOffset;
-
-      return `M ${branchStartX} ${y} C ${c1} ${y}, ${c2} ${y}, ${endX} ${y}`;
-    }
-
-    function createSvgPath(d, color, delay) {
-      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("d", d);
-      path.classList.add("merge-path");
-      path.style.setProperty("--branch-color", color);
-      path.style.setProperty("--delay", `${delay}ms`);
-      mergeSvg.appendChild(path);
-
-      const length = Math.ceil(path.getTotalLength());
-      path.style.setProperty("--path-length", length);
     }
 
     function getMediaMarkup(item) {
@@ -812,60 +883,120 @@
       `;
     }
 
-    function render() {
-      const { height } = getMetrics();
-      timelineCanvas.style.setProperty("--timeline-height", `${height}px`);
-      mergeSvg.setAttribute("height", height);
-      mergeSvg.setAttribute("viewBox", `0 0 ${timelineCanvas.clientWidth} ${height}`);
+    function createSvgPath(d, color) {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", d);
+      path.classList.add("merge-path");
+      path.style.setProperty("--branch-color", color);
+      mergeSvg.appendChild(path);
+
+      const length = Math.ceil(path.getTotalLength());
+      path.style.setProperty("--path-length", length);
+    }
+
+    function drawActiveMergePath() {
       mergeSvg.innerHTML = "";
+
+      if (activeIndex === null) return;
+
+      const activeRow = eventsLayer.querySelector(`[data-index="${activeIndex}"]`);
+      if (!activeRow) return;
+
+      const card = activeRow.querySelector(".experience-card");
+      const dateNode = activeRow.querySelector(".date-node");
+      if (!card || !dateNode) return;
+
+      const canvasRect = timelineCanvas.getBoundingClientRect();
+      const cardRect = card.getBoundingClientRect();
+      const dateRect = dateNode.getBoundingClientRect();
+      const side = sideFor(activeIndex);
+
+      const y = dateRect.top + dateRect.height / 2 - canvasRect.top;
+      const dateX = dateRect.left + dateRect.width / 2 - canvasRect.left;
+      const cardX = isMobile()
+        ? cardRect.left - canvasRect.left
+        : side === "left"
+          ? cardRect.right - canvasRect.left
+          : cardRect.left - canvasRect.left;
+
+      const controlOffset = isMobile() ? 34 : 86;
+      const c1 = side === "left" ? cardX + controlOffset : cardX - controlOffset;
+      const c2 = side === "left" ? dateX - controlOffset : dateX + controlOffset;
+
+      const d = `M ${cardX} ${y} C ${c1} ${y}, ${c2} ${y}, ${dateX} ${y}`;
+      const color = experiences[activeIndex].color || (activeIndex % 2 === 0 ? "#2F5BFF" : "#FF4FA3");
+
+      createSvgPath(d, color);
+    }
+
+    function render() {
       eventsLayer.innerHTML = "";
+      mergeSvg.innerHTML = "";
 
       experiences.forEach((item, index) => {
         const side = sideFor(index);
-        const y = getY(index);
         const color = item.color || (index % 2 === 0 ? "#2F5BFF" : "#FF4FA3");
-        const delay = 120 + index * 90;
-
-        createSvgPath(makePath({ side, y }), color, delay);
+        const isActive = activeIndex === index;
 
         const event = document.createElement("article");
-        event.className = "event";
-        event.style.setProperty("--y", `${y}px`);
+        event.className = `event ${isActive ? "is-active" : ""}`;
+        event.dataset.index = String(index);
         event.style.setProperty("--branch-color", color);
 
         event.innerHTML = `
-          <div class="date-node">${item.date}</div>
+          <button class="date-node" type="button" aria-expanded="${isActive}" aria-label="${item.date} — ${item.title}">
+            ${item.date}
+            <span class="date-tooltip">${item.title}</span>
+          </button>
 
-          <div class="experience-card ${side}" style="--branch-color:${color}; --delay:${delay + 120}ms">
-            <div class="card-top">
-              <span class="branch">${item.branch}</span>
-              <span class="hash">${item.hash}</span>
-              <span class="tag">${item.tag}</span>
-            </div>
+          <div class="card-slot ${side}">
+            <div class="experience-card" style="--branch-color:${color}">
+              <div class="card-top">
+                <span class="branch">${item.branch}</span>
+                <span class="hash">${item.hash}</span>
+                <span class="tag">${item.tag}</span>
+              </div>
 
-            <h2>${item.title}</h2>
-            <p class="company">${item.company}</p>
+              <h2>${item.title}</h2>
+              <p class="company">${item.company}</p>
 
-            <div class="card-media">
-              ${getMediaMarkup(item)}
-            </div>
+              <div class="card-media">
+                ${getMediaMarkup(item)}
+              </div>
 
-            <p class="description">${item.description}</p>
+              <p class="description">${item.description}</p>
 
-            <div class="commands">
-              ${(item.commands || []).map(command => `<span>${command}</span>`).join("")}
+              <div class="commands">
+                ${(item.commands || []).map(command => `<span>${command}</span>`).join("")}
+              </div>
             </div>
           </div>
         `;
 
+        event.querySelector(".date-node").addEventListener("click", () => {
+          activeIndex = activeIndex === index ? null : index;
+          render();
+
+          requestAnimationFrame(() => {
+            const openedRow = eventsLayer.querySelector(`[data-index="${index}"]`);
+            if (activeIndex === index && openedRow) {
+              openedRow.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+          });
+        });
+
         eventsLayer.appendChild(event);
       });
+
+      requestAnimationFrame(drawActiveMergePath);
     }
 
     let resizeTimer;
     window.addEventListener("resize", () => {
       window.clearTimeout(resizeTimer);
-      resizeTimer = window.setTimeout(render, 120);
+      resizeTimer = window.setTimeout(() => {
+        render();
+      }, 120);
     });
 
     render();
