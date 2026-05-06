@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Git Merge Timeline</title>
+
+  <style>
+    :root {
+      --bg: #050616;
+      --panel: rgba(8, 10, 26, 0.88);
+      --text: #F4F7FF;
+      --muted: #9EA8D6;
+      --et-blue: #2F5BFF;
+      --et-magenta: #FF4FA3;
+      --et-purple: #8D5CFF;
+      --et-cyan: #58D7FF;
+      --et-gradient: linear-gradient(135deg, var(--et-blue), var(--et-magenta));
+      --radius: 18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: transparent;
+      color: var(--text);
+      font-family: var(--sans);
+    }
+
+    body { padding: 16px; }
+
+    .git-widget {
+      width: min(100%, 1120px);
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(244, 247, 255, 0.12);
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(47, 91, 255, 0.22), transparent 34rem),
+        radial-gradient(circle at 88% 16%, rgba(255, 79, 163, 0.18), transparent 30rem),
+        linear-gradient(135deg, rgba(4, 6, 22, 0.98), rgba(10, 8, 27, 0.98));
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+    }
+
+    .git-widget::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(rgba(255,255,255,0.022) 50%, rgba(0,0,0,0.035) 50%),
+        linear-gradient(90deg, rgba(255,0,0,0.014), rgba(0,255,0,0.008), rgba(0,0,255,0.014));
+      background-size: 100% 4px, 6px 100%;
+      opacity: 0.38;
+      mix-blend-mode: screen;
+      z-index: 10;
+    }
+
+    .terminal-head {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 16px;
+      border-bottom: 1px solid rgba(244, 247, 255, 0.11);
+      background: linear-gradient(180deg, rgba(22, 25, 52, 0.92), rgba(8, 10, 28, 0.92));
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .dots {
+      display: inline-flex;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 999px;
+    }
+
+    .dot:nth-child(1) { background: #ff5f56; }
+    .dot:nth-child(2) { background: #ffbd2e; }
+    .dot:nth-child(3) { background: #27c93f; }
+
+    .terminal-title {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .hero {
+      padding: clamp(20px, 4vw, 40px) clamp(18px, 5vw, 56px) 10px;
+    }
+
+    .prompt {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: clamp(12px, 2vw, 14px);
+      line-height: 1.6;
+    }
+
+    .prompt strong {
+      color: transparent;
+      background: var(--et-gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      font-weight: 700;
+    }
+
+    .prompt span { color: var(--et-cyan); }
+
+    .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 1.1em;
+      margin-left: 4px;
+      vertical-align: -0.18em;
+      background: var(--et-gradient);
+      animation: blink 1.1s steps(2, start) infinite;
+    }
+
+    @keyframes blink { 50% { opacity: 0; } }
+
+    h1 {
+      margin: 0;
+      max-width: 760px;
+      font-size: clamp(28px, 5vw, 58px);
+      line-height: 0.98;
+      letter-spacing: -0.055em;
+      color: transparent;
+      background: var(--et-gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      text-shadow: 0 0 30px rgba(255, 79, 163, 0.18);
+    }
+
+    .subtitle {
+      margin: 16px 0 0;
+      max-width: 760px;
+      color: #BEC6F5;
+      font-size: clamp(14px, 2vw, 16px);
+      line-height: 1.7;
+    }
+
+    .timeline {
+      position: relative;
+      padding: 34px clamp(14px, 5vw, 56px) 56px;
+    }
+
+    .timeline-canvas {
+      position: relative;
+      min-height: var(--timeline-height, 980px);
+    }
+
+    .merge-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: var(--timeline-height, 980px);
+      overflow: visible;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .main-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 4px;
+      transform: translateX(-50%);
+      border-radius: 999px;
+      background: linear-gradient(
+        180deg,
+        transparent,
+        rgba(47,91,255,0.36),
+        rgba(255,79,163,0.82),
+        rgba(47,91,255,0.36),
+        transparent
+      );
+      box-shadow:
+        0 0 30px rgba(255, 79, 163, 0.34),
+        0 0 42px rgba(47, 91, 255, 0.18);
+      z-index: 0;
+    }
+
+    .main-line::before,
+    .main-line::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      width: 18px;
+      height: 18px;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      border: 2px solid transparent;
+      background:
+        linear-gradient(#07091d, #07091d) padding-box,
+        var(--et-gradient) border-box;
+      box-shadow:
+        0 0 20px rgba(255, 79, 163, 0.72),
+        0 0 28px rgba(47, 91, 255, 0.42);
+    }
+
+    .main-line::before { top: 0; }
+    .main-line::after { bottom: 0; }
+
+    .merge-path {
+      fill: none;
+      stroke: var(--branch-color);
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 8px var(--branch-color));
+      opacity: 0.9;
+      stroke-dasharray: var(--path-length);
+      stroke-dashoffset: var(--path-length);
+      animation: drawPath 900ms ease forwards;
+      animation-delay: var(--delay, 0ms);
+    }
+
+    @keyframes drawPath { to { stroke-dashoffset: 0; } }
+
+    .event {
+      position: absolute;
+      top: var(--y);
+      left: 0;
+      width: 100%;
+      min-height: 168px;
+      transform: translateY(-50%);
+      z-index: 2;
+    }
+
+    .date-node {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 96px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background:
+        linear-gradient(#07091d, #07091d) padding-box,
+        var(--et-gradient) border-box;
+      color: #F4F7FF;
+      box-shadow:
+        0 0 0 6px rgba(47, 91, 255, 0.08),
+        0 0 28px rgba(255, 79, 163, 0.36),
+        0 0 34px rgba(47, 91, 255, 0.24);
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 700;
+      z-index: 4;
+    }
+
+    .date-node::after {
+      content: "merge";
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.78;
+    }
+
+    .experience-card {
+      position: absolute;
+      top: 50%;
+      width: min(42%, 430px);
+      transform: translateY(-50%);
+      border: 1px solid rgba(244, 247, 255, 0.13);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018)),
+        var(--panel);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      padding: 16px;
+      overflow: hidden;
+      opacity: 0;
+      animation: cardIn 520ms cubic-bezier(.2,.8,.2,1) forwards;
+      animation-delay: var(--delay, 0ms);
+      transition: 180ms ease;
+    }
+
+    .experience-card:hover {
+      border-color: var(--branch-color);
+      box-shadow:
+        0 20px 58px rgba(0, 0, 0, 0.44),
+        0 0 24px rgba(255, 79, 163, 0.18);
+    }
+
+    .experience-card.left {
+      left: 0;
+      transform: translateY(-50%) translateX(-18px);
+    }
+
+    .experience-card.right {
+      right: 0;
+      transform: translateY(-50%) translateX(18px);
+    }
+
+    .experience-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: var(--branch-color);
+      box-shadow: 0 0 20px var(--branch-color);
+    }
+
+    .experience-card.left::before { right: 0; }
+    .experience-card.right::before { left: 0; }
+
+    @keyframes cardIn {
+      to {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0);
+      }
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .branch {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--branch-color);
+      border: 1px solid rgba(244, 247, 255, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 4px 8px;
+    }
+
+    .branch::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--branch-color);
+      box-shadow: 0 0 10px var(--branch-color);
+    }
+
+    .hash { color: var(--et-magenta); }
+
+    .tag {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--branch-color);
+      color: #040616;
+      font-weight: 800;
+    }
+
+    .experience-card h2 {
+      margin: 0 0 8px;
+      font-size: clamp(17px, 2.2vw, 23px);
+      line-height: 1.15;
+      letter-spacing: -0.025em;
+    }
+
+    .company {
+      margin: 0 0 8px;
+      color: #E7EAFF;
+      font-weight: 700;
+    }
+
+    .description {
+      margin: 0;
+      color: #BEC6F5;
+      font-size: 14px;
+      line-height: 1.58;
+    }
+
+    .card-media { margin: 12px 0; }
+
+    .card-image {
+      display: block;
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 14px;
+      border: 1px solid rgba(244, 247, 255, 0.12);
+      background: rgba(255,255,255,0.04);
+      box-shadow: 0 10px 28px rgba(0,0,0,0.20);
+    }
+
+    .image-placeholder {
+      width: 100%;
+      min-height: 130px;
+      border-radius: 14px;
+      border: 1.5px dashed rgba(255, 79, 163, 0.38);
+      background:
+        linear-gradient(135deg, rgba(47, 91, 255, 0.12), rgba(255, 79, 163, 0.12)),
+        rgba(255,255,255,0.02);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-align: center;
+      padding: 16px;
+      color: #C9D2FF;
+    }
+
+    .image-placeholder span {
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 0.02em;
+    }
+
+    .image-placeholder small {
+      display: block;
+      max-width: 250px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    .image-placeholder code {
+      font-family: var(--mono);
+      color: #F4F7FF;
+      background: rgba(255,255,255,0.06);
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    .commands {
+      display: grid;
+      gap: 4px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(244, 247, 255, 0.09);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .commands span::before {
+      content: "$ ";
+      color: var(--et-magenta);
+    }
+
+    .footer {
+      padding: 14px clamp(18px, 5vw, 56px) 22px;
+      border-top: 1px solid rgba(244, 247, 255, 0.09);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    .footer strong { color: #F4F7FF; }
+
+    @media (max-width: 780px) {
+      body { padding: 10px; }
+      .hero { padding-bottom: 0; }
+      .timeline { padding-left: 14px; padding-right: 14px; }
+      .main-line { left: 34px; }
+      .event { min-height: 230px; }
+      .date-node { left: 34px; width: 68px; height: 34px; font-size: 11px; }
+      .date-node::after { display: none; }
+      .experience-card,
+      .experience-card.left,
+      .experience-card.right {
+        left: 82px;
+        right: auto;
+        width: calc(100% - 82px);
+      }
+      .experience-card.left::before,
+      .experience-card.right::before { left: 0; right: auto; }
+      .commands { display: none; }
+    }
+
+    @media (max-width: 460px) {
+      .terminal-head { height: 38px; font-size: 10px; }
+      .terminal-head > span:last-child { display: none; }
+      .hero { padding-left: 14px; padding-right: 14px; }
+      .timeline { padding-left: 10px; padding-right: 10px; }
+      .main-line,
+      .date-node { left: 28px; }
+      .date-node { width: 56px; height: 30px; }
+      .experience-card,
+      .experience-card.left,
+      .experience-card.right {
+        left: 66px;
+        width: calc(100% - 66px);
+        padding: 14px;
+      }
+      .card-top { font-size: 10px; }
+      .card-image,
+      .image-placeholder { height: 125px; min-height: 125px; }
+    }
+  </style>
+</head>
+
+<body>
+  <section class="git-widget" aria-label="Timeline professionnelle style Git merge">
+    <header class="terminal-head">
+      <span class="dots" aria-hidden="true">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </span>
+      <span class="terminal-title">~/career/.git — merge-timeline.log</span>
+      <span>embed-ready</span>
+    </header>
+
+    <section class="hero">
+      <p class="prompt">
+        <strong>notion@portfolio</strong>:<span>~/career</span>$ git log --graph --merges --timeline<span class="cursor"></span>
+      </p>
+      <h1>Timeline Git Merge</h1>
+      <p class="subtitle">
+        La branche centrale représente le parcours principal. Chaque expérience arrive alternativement depuis la gauche ou la droite comme une branche Git qui se merge dans la timeline.
+      </p>
+    </section>
+
+    <section class="timeline">
+      <div class="timeline-canvas" id="timelineCanvas">
+        <div class="main-line" aria-hidden="true"></div>
+        <svg class="merge-svg" id="mergeSvg" aria-hidden="true"></svg>
+        <div id="eventsLayer"></div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      Pour personnaliser : modifie le tableau <strong>experiences</strong>. Pour une image, renseigne <strong>image: "URL_DE_L_IMAGE"</strong>.
+    </footer>
+  </section>
+
+  <script>
+    const experiences = [
+      {
+        date: "2002",
+        title: "Naissance à l'île de La Réunion",
+        company: "Origines",
+        branch: "origin/reunion",
+        color: "#2F5BFF",
+        tag: "origin",
+        hash: "2002a01",
+        image: "",
+        description: "Né à l'île de La Réunion. Point de départ d'un parcours construit entre sciences, ingénierie, robotique et création.",
+        commands: ["git init life", "git commit -m 'birth at La Réunion'"]
+      },
+      {
+        date: "2020",
+        title: "Baccalauréat scientifique & Abitur",
+        company: "Formation académique",
+        branch: "education/high-school",
+        color: "#FF4FA3",
+        tag: "diploma",
+        hash: "2020bsc",
+        image: "",
+        description: "Obtention du baccalauréat scientifique et de l'Abitur, avec une base académique orientée sciences et exigence internationale.",
+        commands: ["git checkout -b education/high-school", "git commit -m 'scientific baccalaureate + Abitur'"]
+      },
+      {
+        date: "2023",
+        title: "Fin de classe préparatoire MPSI / MP",
+        company: "Classes préparatoires",
+        branch: "education/cpge",
+        color: "#8D5CFF",
+        tag: "cpge",
+        hash: "2023mps",
+        image: "",
+        description: "Fin du cursus en classes préparatoires MPSI puis MP, avec consolidation d'une base scientifique, mathématique et physique exigeante.",
+        commands: ["git checkout -b education/cpge", "git commit -m 'complete MPSI MP'"]
+      },
+      {
+        date: "2023",
+        title: "Entrée à SeaTech Toulon",
+        company: "École d'ingénieur",
+        branch: "education/seatech",
+        color: "#2F5BFF",
+        tag: "engineering",
+        hash: "2023sea",
+        image: "",
+        description: "Entrée en école d'ingénieur à SeaTech Toulon, avec une trajectoire orientée systèmes, robotique et projets techniques.",
+        commands: ["git checkout -b education/seatech", "git merge education/cpge"]
+      },
+      {
+        date: "2023",
+        title: "Entrée au Robot Club de Toulon",
+        company: "Robot Club Toulon",
+        branch: "robotics/club",
+        color: "#FF4FA3",
+        tag: "robotics",
+        hash: "2023rct",
+        image: "",
+        description: "Intégration du Robot Club de Toulon, avec engagement dans des projets robotiques collectifs et compétitifs.",
+        commands: ["git checkout -b robotics/club", "git commit -m 'join Robot Club Toulon'"]
+      },
+      {
+        date: "2023",
+        title: "Dassault UAV Challenge",
+        company: "Compétition robotique / aéronautique",
+        branch: "robotics/uav",
+        color: "#8D5CFF",
+        tag: "challenge",
+        hash: "2023uav",
+        image: "",
+        description: "Participation au Dassault UAV Challenge, avec travail sur des problématiques de systèmes autonomes, drones et ingénierie collaborative.",
+        commands: ["git checkout -b robotics/uav", "git commit -m 'Dassault UAV Challenge'"]
+      },
+      {
+        date: "2023",
+        title: "2e place au concours de la nouvelle",
+        company: "Concours d'écriture",
+        branch: "writing/competition",
+        color: "#2F5BFF",
+        tag: "2nd place",
+        hash: "2023wri",
+        image: "",
+        description: "Obtention de la 2e place au concours de la nouvelle, à l'intersection entre rigueur scientifique et créativité littéraire.",
+        commands: ["git checkout -b writing/competition", "git commit -m '2nd place short story competition'"]
+      },
+      {
+        date: "2024",
+        title: "Participation à la RoboCup 2024",
+        company: "Robot Club Toulon / RoboCup",
+        branch: "robotics/robocup",
+        color: "#FF4FA3",
+        tag: "robocup",
+        hash: "2024rcp",
+        image: "",
+        description: "Participation à la RoboCup 2024 dans un cadre d'ingénierie robotique compétitive, avec mise en pratique sur des systèmes autonomes.",
+        commands: ["git checkout -b robotics/robocup", "git merge robotics/club"]
+      },
+      {
+        date: "2025",
+        title: "1re place au concours de la nouvelle",
+        company: "Concours d'écriture",
+        branch: "writing/award",
+        color: "#8D5CFF",
+        tag: "1st place",
+        hash: "2025nvl",
+        image: "",
+        description: "Obtention de la 1re place au concours de la nouvelle, confirmant une progression forte sur le versant rédactionnel et narratif.",
+        commands: ["git checkout -b writing/award", "git commit -m '1st place short story competition'"]
+      },
+      {
+        date: "2025",
+        title: "Stage au Japon sur un robot poisson",
+        company: "Tokyo University of Science",
+        branch: "robotics/fish-robot",
+        color: "#2F5BFF",
+        tag: "internship",
+        hash: "2025jpn",
+        image: "",
+        description: "Stage à Tokyo University of Science au Japon autour d'un robot poisson, à l'interface entre robotique bio-inspirée, recherche appliquée et expérimentation.",
+        commands: ["git checkout -b robotics/fish-robot", "git commit -m 'Tokyo University of Science internship'"]
+      },
+      {
+        date: "2025",
+        title: "Entrée à l'ENSTA en double diplôme",
+        company: "ENSTA",
+        branch: "education/ensta",
+        color: "#FF4FA3",
+        tag: "double degree",
+        hash: "2025ens",
+        image: "",
+        description: "Entrée à l'ENSTA dans le cadre d'un double diplôme, en continuité d'un parcours d'ingénierie à forte densité scientifique et technologique.",
+        commands: ["git checkout -b education/ensta", "git merge education/seatech"]
+      },
+      {
+        date: "2025",
+        title: "Projet robot poisson",
+        company: "Projet robotique",
+        branch: "project/fish-robot",
+        color: "#8D5CFF",
+        tag: "project",
+        hash: "2025fsh",
+        image: "",
+        description: "Développement et approfondissement d'un projet de robot poisson, dans la continuité du stage au Japon et des travaux en robotique bio-inspirée.",
+        commands: ["git checkout -b project/fish-robot", "git merge robotics/fish-robot"]
+      },
+      {
+        date: "2026",
+        title: "Professeur — Cours de ROS",
+        company: "Transmission / pédagogie",
+        branch: "teaching/ros",
+        color: "#2F5BFF",
+        tag: "teaching",
+        hash: "2026ros",
+        image: "",
+        description: "Enseignement de cours de ROS, avec transmission de compétences en architecture logicielle robotique, middleware et développement de systèmes autonomes.",
+        commands: ["git checkout -b teaching/ros", "git commit -m 'teach ROS courses'"]
+      },
+      {
+        date: "2026",
+        title: "Jury du concours de la nouvelle CROUS",
+        company: "CROUS",
+        branch: "writing/jury",
+        color: "#FF4FA3",
+        tag: "jury",
+        hash: "2026crs",
+        image: "",
+        description: "Participation comme jury au concours de la nouvelle du CROUS, avec un rôle d'évaluation et de sélection de productions littéraires.",
+        commands: ["git checkout -b writing/jury", "git merge writing/award"]
+      },
+      {
+        date: "2026",
+        title: "Coupe de France de Robotique",
+        company: "Compétition robotique",
+        branch: "robotics/france-cup",
+        color: "#8D5CFF",
+        tag: "competition",
+        hash: "2026cdf",
+        image: "",
+        description: "Participation à la Coupe de France de Robotique, dans la continuité d'un parcours fortement ancré dans la robotique compétitive.",
+        commands: ["git checkout -b robotics/france-cup", "git merge robotics/robocup"]
+      }
+    ];
+
+    const timelineCanvas = document.getElementById("timelineCanvas");
+    const mergeSvg = document.getElementById("mergeSvg");
+    const eventsLayer = document.getElementById("eventsLayer");
+
+    function isMobile() {
+      return window.innerWidth <= 780;
+    }
+
+    function getMetrics() {
+      const top = isMobile() ? 112 : 92;
+      const spacing = isMobile() ? 250 : 230;
+      const height = top * 2 + Math.max(0, experiences.length - 1) * spacing;
+      return { top, spacing, height };
+    }
+
+    function getY(index) {
+      const { top, spacing } = getMetrics();
+      return top + index * spacing;
+    }
+
+    function sideFor(index) {
+      if (isMobile()) return "right";
+      return index % 2 === 0 ? "left" : "right";
+    }
+
+    function makePath({ side, y }) {
+      const width = timelineCanvas.clientWidth;
+      const centerX = isMobile() ? (window.innerWidth <= 460 ? 28 : 34) : width / 2;
+
+      if (isMobile()) {
+        const startX = 82;
+        return `M ${startX} ${y} C 58 ${y}, 46 ${y}, ${centerX} ${y}`;
+      }
+
+      const cardWidth = Math.min(width * 0.42, 430);
+      const gap = 64;
+      const branchStartX = side === "left"
+        ? centerX - cardWidth - gap
+        : centerX + cardWidth + gap;
+      const endX = centerX;
+      const controlOffset = 92;
+      const c1 = side === "left" ? branchStartX + controlOffset : branchStartX - controlOffset;
+      const c2 = side === "left" ? endX - controlOffset : endX + controlOffset;
+
+      return `M ${branchStartX} ${y} C ${c1} ${y}, ${c2} ${y}, ${endX} ${y}`;
+    }
+
+    function createSvgPath(d, color, delay) {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", d);
+      path.classList.add("merge-path");
+      path.style.setProperty("--branch-color", color);
+      path.style.setProperty("--delay", `${delay}ms`);
+      mergeSvg.appendChild(path);
+
+      const length = Math.ceil(path.getTotalLength());
+      path.style.setProperty("--path-length", length);
+    }
+
+    function getMediaMarkup(item) {
+      if (item.image) {
+        return `<img src="${item.image}" alt="${item.title}" class="card-image" loading="lazy" />`;
+      }
+
+      return `
+        <div class="image-placeholder">
+          <span>Image</span>
+          <small>Ajoute une URL dans <code>image: "..."</code></small>
+        </div>
+      `;
+    }
+
+    function render() {
+      const { height } = getMetrics();
+      timelineCanvas.style.setProperty("--timeline-height", `${height}px`);
+      mergeSvg.setAttribute("height", height);
+      mergeSvg.setAttribute("viewBox", `0 0 ${timelineCanvas.clientWidth} ${height}`);
+      mergeSvg.innerHTML = "";
+      eventsLayer.innerHTML = "";
+
+      experiences.forEach((item, index) => {
+        const side = sideFor(index);
+        const y = getY(index);
+        const color = item.color || (index % 2 === 0 ? "#2F5BFF" : "#FF4FA3");
+        const delay = 120 + index * 90;
+
+        createSvgPath(makePath({ side, y }), color, delay);
+
+        const event = document.createElement("article");
+        event.className = "event";
+        event.style.setProperty("--y", `${y}px`);
+        event.style.setProperty("--branch-color", color);
+
+        event.innerHTML = `
+          <div class="date-node">${item.date}</div>
+
+          <div class="experience-card ${side}" style="--branch-color:${color}; --delay:${delay + 120}ms">
+            <div class="card-top">
+              <span class="branch">${item.branch}</span>
+              <span class="hash">${item.hash}</span>
+              <span class="tag">${item.tag}</span>
+            </div>
+
+            <h2>${item.title}</h2>
+            <p class="company">${item.company}</p>
+
+            <div class="card-media">
+              ${getMediaMarkup(item)}
+            </div>
+
+            <p class="description">${item.description}</p>
+
+            <div class="commands">
+              ${(item.commands || []).map(command => `<span>${command}</span>`).join("")}
+            </div>
+          </div>
+        `;
+
+        eventsLayer.appendChild(event);
+      });
+    }
+
+    let resizeTimer;
+    window.addEventListener("resize", () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(render, 120);
+    });
+
+    render();
+  </script>
+</body>
+</html>
