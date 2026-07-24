@@ -37,6 +37,18 @@
       box-sizing: border-box;
     }
 
+    ::selection {
+      background: var(--black);
+      color: #ffffff;
+      text-shadow: none;
+    }
+
+    ::-moz-selection {
+      background: var(--black);
+      color: #ffffff;
+      text-shadow: none;
+    }
+
     html {
       scroll-behavior: smooth;
       background: #ffffff;
@@ -191,6 +203,10 @@
 
     .toc {
       width: min(100%, 390px);
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
     }
 
     .toc-list {
