@@ -685,7 +685,6 @@
 
       if (!ctx) return;
 
-      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
       const chars = [" ", ".", ":", "-", "~", "+", "*", "o", "O", "0", "#", "@"];
 
       let width = 0;
@@ -732,8 +731,6 @@
       }
 
       function addRipple(x, y) {
-        if (reducedMotion.matches) return;
-
         ripples.push({
           x,
           y,
