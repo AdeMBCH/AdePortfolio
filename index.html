@@ -91,6 +91,15 @@
       pointer-events: none;
     }
 
+    .pixel-fish-layer {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+
     .ascii-accessible-copy {
       position: absolute;
       width: 1px;
@@ -110,6 +119,7 @@
 
     .ascii-glyph {
       display: inline;
+      position: relative;
     }
 
     .ascii-glyph.is-pending {
@@ -118,6 +128,85 @@
 
     .ascii-glyph.is-scrambling {
       color: var(--ascii-color);
+    }
+
+    .ascii-glyph.is-loosening {
+      display: inline-block;
+      animation: glyph-loosen 180ms steps(2, end) infinite;
+    }
+
+    .ascii-glyph.is-loosening::after {
+      content: "°";
+      position: absolute;
+      left: 62%;
+      bottom: 72%;
+      color: #06a6a6;
+      font-size: 0.72em;
+      animation: glyph-sweat 520ms ease-out infinite;
+      pointer-events: none;
+    }
+
+    .ascii-glyph.is-placeholder {
+      color: var(--ascii-color);
+      animation: ascii-placeholder 720ms steps(2, end) infinite;
+    }
+
+    .ascii-glyph.is-ready-to-pull {
+      z-index: 2;
+      display: inline-block;
+      box-shadow: 0 2px 0 #06a6a6;
+      animation: glyph-detach-pop 280ms steps(4, end) forwards;
+    }
+
+    .letter-drag-ghost {
+      position: fixed;
+      z-index: 50;
+      display: inline-block;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .letter-drag-ghost.is-dropped {
+      position: absolute;
+    }
+
+    .letter-drag-ghost.is-eaten {
+      animation: letter-eaten 420ms steps(6, end) forwards;
+    }
+
+    body.is-dragging-letter,
+    body.is-dragging-letter * {
+      cursor: grabbing !important;
+    }
+
+    @keyframes glyph-loosen {
+      0% { transform: translate(-1px, 0) rotate(-4deg); }
+      50% { transform: translate(1px, -1px) rotate(4deg); }
+      100% { transform: translate(0, 1px) rotate(-2deg); }
+    }
+
+    @keyframes glyph-sweat {
+      0% { opacity: 0; transform: translate(0, 2px) scale(0.7); }
+      35% { opacity: 1; }
+      100% { opacity: 0; transform: translate(4px, -7px) scale(1); }
+    }
+
+    @keyframes ascii-placeholder {
+      0%, 100% { opacity: 0.72; }
+      50% { opacity: 1; }
+    }
+
+    @keyframes glyph-detach-pop {
+      0% { transform: translateY(0) scale(1); }
+      55% { transform: translateY(-4px) scale(1.42); }
+      100% { transform: translateY(-3px) scale(1.3); }
+    }
+
+    @keyframes letter-eaten {
+      0% { opacity: 1; transform: translate(-50%, -50%) rotate(0) scale(1); }
+      35% { transform: translate(-50%, -50%) rotate(-12deg) scale(1.25); }
+      70% { opacity: 0.75; transform: translate(-50%, -50%) rotate(10deg) scale(0.55); }
+      100% { opacity: 0; transform: translate(-50%, -50%) rotate(0) scale(0); }
     }
 
     main,
@@ -452,6 +541,21 @@
       text-align: center;
     }
 
+    .shore-wave-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .contact-section > :not(.shore-wave-layer) {
+      position: relative;
+      z-index: 1;
+    }
+
     .contact-name {
       margin: 0;
       color: var(--black);
@@ -545,6 +649,14 @@
       .gif-reveal-frame img {
         opacity: 1 !important;
       }
+
+      .pixel-fish-layer {
+        display: none;
+      }
+
+      .shore-wave-layer {
+        display: none;
+      }
     }
   </style>
 </head>
@@ -552,6 +664,7 @@
 <body>
   <div class="page">
     <canvas class="ascii-ripple-layer" id="asciiRippleCanvas" aria-hidden="true"></canvas>
+    <canvas class="pixel-fish-layer" id="pixelFishCanvas" aria-hidden="true"></canvas>
 
     <header class="site-header" aria-label="Primary navigation">
       <a class="site-title" href="#top">Matys Adéas BIECHE</a>
@@ -825,6 +938,7 @@
     </main>
 
     <section class="contact-section" id="contact" aria-labelledby="contact-title">
+      <canvas class="shore-wave-layer" id="shoreWaveCanvas" aria-hidden="true"></canvas>
       <h3 class="contact-name" id="contact-title">Matys Adéas BIECHE</h3>
 
       <div class="socials">
@@ -877,8 +991,28 @@
       rippleWaveSpeed: 0.34,
       rippleRingWidth: 22,
       rippleLimit: 14,
-      indexWaveInterval: 420
+      indexWaveInterval: 420,
+      desktopFishCount: 6,
+      mobileFishCount: 6,
+      fishFrameInterval: 33,
+      mobileFishFrameInterval: 50,
+      fishScareDistance: 155,
+      letterHoldDelay: 620,
+      letterLoosenDelay: 180,
+      letterDislodgeDistance: 11,
+      fishFoodEatDistance: 22,
+      shoreCycleDuration: 8200,
+      shoreAdvanceRatio: 0.62,
+      shoreFrameInterval: 34,
+      mobileShoreFrameInterval: 52,
+      shoreStartRatio: 0.26,
+      shoreEndRatio: 0.9
     });
+
+    const PORTFOLIO_SHORE_STATE = {
+      active: false,
+      worldY: Infinity
+    };
 
     (() => {
       const blockClipboard = (event) => event.preventDefault();
@@ -1115,6 +1249,8 @@
         animation.renderedPhase = phase;
 
         glyphs.forEach((glyph) => {
+          if (glyph.dataset.detached === "true") return;
+
           const threshold = Number(glyph.dataset.threshold);
           const localProgress = (progress - threshold) / scrambleWidth;
 
@@ -1200,6 +1336,29 @@
         image.addEventListener("load", requestRevealRender, { once: true });
       });
 
+      window.addEventListener("portfolio-shore-wave", (event) => {
+        if (event.detail.direction !== "down") return;
+
+        textAnimations.forEach((animation) => {
+          if (!animation.target.closest(".contact-section")) return;
+          if (animation.lastShoreCycle === event.detail.cycle) return;
+
+          const rect = animation.target.getBoundingClientRect();
+          const lineWorldY = rect.top + window.scrollY + rect.height * 0.5;
+          if (Math.abs(lineWorldY - event.detail.worldY) > 16) return;
+
+          animation.lastShoreCycle = event.detail.cycle;
+          animation.shoreReplayUntil = performance.now() + ANIMATION_SETTINGS.textDuration;
+          animation.progress = 0;
+          animation.renderedProgress = -1;
+          animation.renderedPhase = -1;
+          animation.triggered = true;
+          updateTextTarget(animation, 0);
+        });
+
+        requestRevealRender();
+      });
+
       const updateReveals = () => {
         const viewportHeight = window.innerHeight;
         const documentHeight = document.documentElement.scrollHeight;
@@ -1245,13 +1404,16 @@
           let entering = smoothstep(
             (viewportHeight - revealInset - rect.top) / revealDistance
           );
+          const shoreReplayIsActive = performance.now() < (animation.shoreReplayUntil || 0);
 
-          if (animation.target.closest(".contact-section")) {
+          if (animation.target.closest(".contact-section") && !shoreReplayIsActive) {
             entering = Math.max(entering, pageEndProgress);
           }
 
-          if (entering > 0.005) animation.triggered = true;
-          animation.progress = Math.max(animation.progress, entering);
+          if (!shoreReplayIsActive) {
+            if (entering > 0.005) animation.triggered = true;
+            animation.progress = Math.max(animation.progress, entering);
+          }
         });
 
         requestRevealRender();
@@ -1270,6 +1432,722 @@
         requestRevealUpdate();
       });
       requestRevealUpdate();
+    })();
+
+    (() => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+      const section = document.querySelector(".contact-section");
+      const canvas = document.getElementById("shoreWaveCanvas");
+      const context = canvas ? canvas.getContext("2d") : null;
+      if (!section || !canvas || !context) return;
+
+      const foamCharacters = ["~", "-", ".", ":", "o", "*", "+"];
+      let width = 0;
+      let height = 0;
+      let pixelRatio = 1;
+      let active = false;
+      let activation = 0;
+      let cycleStart = 0;
+      let previousFrame = 0;
+      let animationFrame = null;
+
+      const easeInOut = (value) => (
+        value < 0.5
+          ? 4 * value * value * value
+          : 1 - Math.pow(-2 * value + 2, 3) / 2
+      );
+
+      const resizeWave = () => {
+        const rect = section.getBoundingClientRect();
+        width = Math.max(1, Math.round(rect.width));
+        height = Math.max(1, Math.round(rect.height));
+        pixelRatio = Math.max(
+          1,
+          Math.min(window.innerWidth <= ANIMATION_SETTINGS.mobileBreakpoint ? 1 : 1.5, window.devicePixelRatio || 1)
+        );
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.font = `11px ${getComputedStyle(document.documentElement).getPropertyValue("--font")}`;
+        PORTFOLIO_SHORE_STATE.worldY = rect.top + window.scrollY +
+          height * ANIMATION_SETTINGS.shoreEndRatio;
+      };
+
+      const noise = (seed) => {
+        const value = Math.sin(seed * 12.9898) * 43758.5453;
+        return value - Math.floor(value);
+      };
+
+      const drawFoamField = (baseY, timestamp, cycle, intensity) => {
+        const cellSize = window.innerWidth <= ANIMATION_SETTINGS.mobileBreakpoint ? 17 : 14;
+        const bandRadius = window.innerWidth <= ANIMATION_SETTINGS.mobileBreakpoint ? 58 : 72;
+        const tick = Math.floor(timestamp / 145);
+        const firstRow = Math.floor((baseY - bandRadius) / cellSize);
+        const lastRow = Math.ceil((baseY + bandRadius) / cellSize);
+        const columnCount = Math.ceil(width / cellSize);
+
+        for (let row = firstRow; row <= lastRow; row += 1) {
+          const y = row * cellSize;
+
+          for (let column = 0; column <= columnCount; column += 1) {
+            const x = column * cellSize;
+            const curve = baseY +
+              Math.sin(column * 0.31 + timestamp * 0.0009) * 13 +
+              Math.sin(column * 0.09 - timestamp * 0.00055) * 7;
+            const distance = Math.abs(y - curve);
+            const envelope = Math.max(0, 1 - distance / bandRadius);
+            const seed = Math.abs(column * 43 + row * 71 + cycle * 101);
+            const flicker = noise(seed + tick * 19);
+            const density = envelope * intensity * 0.78;
+
+            if (flicker > density) continue;
+
+            const colorIndex = Math.floor(noise(seed * 3 + tick) * ANIMATION_SETTINGS.colors.length);
+            context.fillStyle = ANIMATION_SETTINGS.colors[colorIndex];
+            context.globalAlpha = 0.12 + envelope * intensity * 0.5;
+
+            if (seed % 3 === 0) {
+              const pixelSize = 3 + Math.floor(noise(seed + 7) * 6);
+              context.fillRect(
+                Math.round(x - pixelSize * 0.5),
+                Math.round(y - pixelSize * 0.5),
+                pixelSize,
+                pixelSize
+              );
+            } else {
+              context.fillText(
+                foamCharacters[Math.floor(noise(seed + tick * 5) * foamCharacters.length)],
+                x,
+                y
+              );
+            }
+          }
+        }
+      };
+
+      const drawShoreWave = (timestamp) => {
+        if (!active) {
+          animationFrame = null;
+          return;
+        }
+
+        const frameInterval = window.innerWidth <= ANIMATION_SETTINGS.mobileBreakpoint
+          ? ANIMATION_SETTINGS.mobileShoreFrameInterval
+          : ANIMATION_SETTINGS.shoreFrameInterval;
+
+        if (timestamp - previousFrame >= frameInterval) {
+          const elapsed = timestamp - cycleStart;
+          const cycle = Math.max(0, Math.floor(elapsed / ANIMATION_SETTINGS.shoreCycleDuration));
+          const cycleProgress = (elapsed % ANIMATION_SETTINGS.shoreCycleDuration) /
+            ANIMATION_SETTINGS.shoreCycleDuration;
+          const isAdvancing = cycleProgress <= ANIMATION_SETTINGS.shoreAdvanceRatio;
+          const localProgress = isAdvancing
+            ? cycleProgress / ANIMATION_SETTINGS.shoreAdvanceRatio
+            : (cycleProgress - ANIMATION_SETTINGS.shoreAdvanceRatio) /
+              (1 - ANIMATION_SETTINGS.shoreAdvanceRatio);
+          const movement = isAdvancing
+            ? easeInOut(localProgress)
+            : 1 - easeInOut(localProgress);
+          const positionRatio = ANIMATION_SETTINGS.shoreStartRatio +
+            (ANIMATION_SETTINGS.shoreEndRatio - ANIMATION_SETTINGS.shoreStartRatio) * movement;
+          const baseY = height * positionRatio;
+
+          previousFrame = timestamp;
+          context.clearRect(0, 0, width, height);
+          const intensity = isAdvancing ? 1 : 0.45;
+          drawFoamField(baseY, timestamp, cycle, intensity);
+          context.globalAlpha = 1;
+
+          const sectionWorldTop = section.getBoundingClientRect().top + window.scrollY;
+          PORTFOLIO_SHORE_STATE.active = true;
+          PORTFOLIO_SHORE_STATE.worldY = sectionWorldTop + baseY;
+
+          if (isAdvancing) {
+            window.dispatchEvent(new CustomEvent("portfolio-shore-wave", {
+              detail: {
+                cycle: `${activation}-${cycle}`,
+                direction: "down",
+                worldY: sectionWorldTop + baseY
+              }
+            }));
+          }
+        }
+
+        animationFrame = requestAnimationFrame(drawShoreWave);
+      };
+
+      const observer = new IntersectionObserver((entries) => {
+        const isVisible = entries.some((entry) => entry.isIntersecting);
+        if (isVisible === active) return;
+
+        active = isVisible;
+        PORTFOLIO_SHORE_STATE.active = active;
+        if (active) {
+          activation += 1;
+          cycleStart = performance.now();
+          previousFrame = 0;
+          resizeWave();
+          if (!animationFrame) animationFrame = requestAnimationFrame(drawShoreWave);
+        } else {
+          context.clearRect(0, 0, width, height);
+          const rect = section.getBoundingClientRect();
+          PORTFOLIO_SHORE_STATE.worldY = rect.top + window.scrollY +
+            height * ANIMATION_SETTINGS.shoreEndRatio;
+        }
+      }, { threshold: 0.08 });
+
+      window.addEventListener("resize", resizeWave);
+      observer.observe(section);
+      resizeWave();
+    })();
+
+    (() => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+      const canvas = document.getElementById("pixelFishCanvas");
+      const context = canvas ? canvas.getContext("2d") : null;
+      if (!canvas || !context) return;
+
+      const sprite = document.createElement("canvas");
+      const spriteContext = sprite.getContext("2d");
+      const pointer = { active: false, x: 0, y: 0, expires: 0 };
+      const food = { active: false, dropped: false, id: null, x: 0, y: 0 };
+      const shockwaves = [];
+      const fishes = [];
+      let width = 0;
+      let height = 0;
+      let worldHeight = 0;
+      let pixelRatio = 1;
+      let previousFrame = 0;
+      let animationFrame = null;
+
+      sprite.width = 20;
+      sprite.height = 12;
+
+      const isMobileViewport = () => window.innerWidth <= ANIMATION_SETTINGS.mobileBreakpoint;
+      const randomBetween = (minimum, maximum) => minimum + Math.random() * (maximum - minimum);
+      const normalizeAngle = (angle) => Math.atan2(Math.sin(angle), Math.cos(angle));
+
+      const swimBottom = (clearance = 0) => Math.max(
+        height * 0.55,
+        Math.min(worldHeight, PORTFOLIO_SHORE_STATE.worldY) - clearance
+      );
+
+      const assignFishBand = (fish, index, count) => {
+        const availableHeight = swimBottom(40);
+        const bandHeight = availableHeight / count;
+        fish.minY = index * bandHeight;
+        fish.maxY = Math.min(availableHeight, (index + 1) * bandHeight);
+        fish.homeY = (fish.minY + fish.maxY) * 0.5;
+
+        if (!Number.isFinite(fish.y)) {
+          fish.y = index === 0
+            ? randomBetween(height * 0.18, Math.min(height * 0.82, fish.maxY - 40))
+            : randomBetween(fish.minY + 60, Math.max(fish.minY + 61, fish.maxY - 60));
+        } else {
+          fish.y = Math.max(fish.minY + 20, Math.min(fish.maxY - 20, fish.y));
+        }
+      };
+
+      const createFish = (index, count) => {
+        const baseSpeed = randomBetween(13, 22);
+        const fish = {
+          x: randomBetween(width * 0.12, width * 0.88),
+          y: NaN,
+          heading: randomBetween(-Math.PI, Math.PI),
+          targetHeading: randomBetween(-Math.PI, Math.PI),
+          speed: baseSpeed,
+          baseSpeed,
+          turnSpeed: randomBetween(0.55, 0.82),
+          nextTurn: performance.now() + randomBetween(1800, 5200),
+          phase: randomBetween(0, Math.PI * 2),
+          burst: 0,
+          lastShockwave: -1,
+          size: isMobileViewport() ? randomBetween(23, 29) : randomBetween(27, 37),
+          opacity: randomBetween(0.13, 0.19),
+          color: ANIMATION_SETTINGS.colors[index % ANIMATION_SETTINGS.colors.length]
+        };
+
+        assignFishBand(fish, index, count);
+        return fish;
+      };
+
+      const syncFishCount = () => {
+        const desiredCount = isMobileViewport()
+          ? ANIMATION_SETTINGS.mobileFishCount
+          : ANIMATION_SETTINGS.desktopFishCount;
+
+        while (fishes.length < desiredCount) fishes.push(createFish(fishes.length, desiredCount));
+        if (fishes.length > desiredCount) fishes.length = desiredCount;
+        fishes.forEach((fish, index) => assignFishBand(fish, index, desiredCount));
+      };
+
+      const resizeCanvas = () => {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        worldHeight = Math.max(height, document.documentElement.scrollHeight);
+        pixelRatio = Math.max(1, Math.min(isMobileViewport() ? 1 : 2, window.devicePixelRatio || 1));
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        context.imageSmoothingEnabled = false;
+        syncFishCount();
+      };
+
+      const drawSprite = (fish) => {
+        const screenY = fish.y - window.scrollY;
+        if (screenY < -fish.size || screenY > height + fish.size) return;
+
+        const tailFrame = Math.round(Math.sin(fish.phase) * 2);
+        const finFrame = Math.sin(fish.phase * 0.5) > 0 ? 1 : 0;
+
+        spriteContext.clearRect(0, 0, sprite.width, sprite.height);
+        spriteContext.fillStyle = fish.color;
+
+        spriteContext.fillRect(8, 2, 5, 1);
+        spriteContext.fillRect(6, 3, 9, 1);
+        spriteContext.fillRect(5, 4, 11, 4);
+        spriteContext.fillRect(6, 8, 9, 1);
+        spriteContext.fillRect(8, 9, 5, 1);
+        spriteContext.fillRect(15, 5, 2, 2);
+
+        spriteContext.fillRect(3, 4 + tailFrame, 3, 4);
+        spriteContext.fillRect(1, 2 + tailFrame, 3, 3);
+        spriteContext.fillRect(1, 7 + tailFrame, 3, 3);
+        spriteContext.fillRect(9, 9 + finFrame, 3, 1);
+
+        context.save();
+        context.translate(Math.round(fish.x), Math.round(screenY));
+        context.rotate(fish.heading);
+        context.globalAlpha = fish.opacity;
+        context.drawImage(
+          sprite,
+          -fish.size * 0.5,
+          -fish.size * 0.3,
+          fish.size,
+          fish.size * 0.6
+        );
+        context.restore();
+      };
+
+      const updateFish = (fish, delta, timestamp) => {
+        const edgeMargin = Math.min(100, Math.min(width, height) * 0.14);
+        const verticalMargin = Math.min(100, (fish.maxY - fish.minY) * 0.14);
+        const shoreLimit = swimBottom(fish.size * 0.62);
+        const pointerIsActive = pointer.active && timestamp < pointer.expires;
+        const pointerWorldY = pointer.y + window.scrollY;
+        const pointerDistance = pointerIsActive
+          ? Math.hypot(fish.x - pointer.x, fish.y - pointerWorldY)
+          : Infinity;
+        const isThreatened = pointerDistance < ANIMATION_SETTINGS.fishScareDistance;
+        let isChasingFood = false;
+
+        if (fish.y > shoreLimit - Math.max(55, fish.size * 1.8)) {
+          fish.targetHeading = Math.atan2(
+            Math.min(fish.homeY, shoreLimit - 90) - fish.y,
+            width * 0.5 - fish.x
+          );
+          fish.burst = Math.max(fish.burst, 0.7);
+        } else if (food.active) {
+          const foodDistance = Math.hypot(fish.x - food.x, fish.y - food.y);
+          const orbit = foodDistance < 24
+            ? Math.sin(timestamp * 0.012 + fish.phase) * 0.9
+            : 0;
+
+          fish.targetHeading = Math.atan2(food.y - fish.y, food.x - fish.x) + orbit;
+          fish.burst = Math.max(fish.burst, foodDistance < 24 ? 0.45 : 1.15);
+          isChasingFood = true;
+        } else if (isThreatened) {
+          fish.targetHeading = Math.atan2(fish.y - pointerWorldY, fish.x - pointer.x);
+          fish.burst = Math.max(
+            fish.burst,
+            1 - pointerDistance / ANIMATION_SETTINGS.fishScareDistance
+          );
+        } else if (
+          fish.x < edgeMargin || fish.x > width - edgeMargin ||
+          fish.y < fish.minY + verticalMargin || fish.y > fish.maxY - verticalMargin
+        ) {
+          fish.targetHeading = Math.atan2(fish.homeY - fish.y, width * 0.5 - fish.x);
+        } else if (timestamp >= fish.nextTurn) {
+          fish.targetHeading += randomBetween(-1.15, 1.15);
+          fish.nextTurn = timestamp + randomBetween(2200, 6200);
+        }
+
+        if (!food.active) {
+          shockwaves.forEach((shockwave) => {
+            if (fish.lastShockwave === shockwave.id) return;
+
+            const age = timestamp - shockwave.start;
+            const radius = age * ANIMATION_SETTINGS.rippleWaveSpeed;
+            const distance = Math.hypot(fish.x - shockwave.x, fish.y - shockwave.y);
+
+            if (Math.abs(distance - radius) < 24) {
+              fish.lastShockwave = shockwave.id;
+              fish.targetHeading = Math.atan2(fish.y - shockwave.y, fish.x - shockwave.x);
+              fish.burst = Math.max(fish.burst, 1.2);
+            }
+          });
+        }
+
+        fish.burst = Math.max(0, fish.burst - delta * 0.52);
+
+        const desiredSpeed = fish.baseSpeed * (1 + fish.burst * (isChasingFood ? 5.2 : 2.8));
+        const speedResponse = fish.burst > 0 ? 5.5 : 1.2;
+        fish.speed += (desiredSpeed - fish.speed) * (1 - Math.exp(-speedResponse * delta));
+
+        const angleDifference = normalizeAngle(fish.targetHeading - fish.heading);
+        const maximumTurn = fish.turnSpeed * (1 + fish.burst * 3.2) * delta;
+        fish.heading += Math.max(-maximumTurn, Math.min(maximumTurn, angleDifference));
+        fish.heading += Math.sin(fish.phase * 0.42) * 0.0025;
+
+        fish.x += Math.cos(fish.heading) * fish.speed * delta;
+        fish.y += Math.sin(fish.heading) * fish.speed * delta;
+        fish.phase += delta * (5 + fish.speed * 0.075);
+
+        fish.x = Math.max(-fish.size, Math.min(width + fish.size, fish.x));
+        fish.y = Math.max(0, Math.min(shoreLimit, fish.y));
+      };
+
+      const animateFish = (timestamp) => {
+        const frameInterval = isMobileViewport()
+          ? ANIMATION_SETTINGS.mobileFishFrameInterval
+          : ANIMATION_SETTINGS.fishFrameInterval;
+
+        if (timestamp - previousFrame >= frameInterval) {
+          const delta = previousFrame
+            ? Math.min(0.06, (timestamp - previousFrame) / 1000)
+            : 0;
+
+          previousFrame = timestamp;
+          context.clearRect(0, 0, width, height);
+          while (
+            shockwaves.length &&
+            timestamp - shockwaves[0].start > ANIMATION_SETTINGS.rippleLifespan
+          ) {
+            shockwaves.shift();
+          }
+          fishes.forEach((fish) => {
+            updateFish(fish, delta, timestamp);
+            drawSprite(fish);
+          });
+
+          if (food.active && food.dropped) {
+            const eater = fishes.find((fish) => (
+              Math.hypot(fish.x - food.x, fish.y - food.y) <= ANIMATION_SETTINGS.fishFoodEatDistance
+            ));
+
+            if (eater) {
+              const foodId = food.id;
+              food.active = false;
+              food.dropped = false;
+              food.id = null;
+              eater.burst = Math.max(eater.burst, 0.9);
+              eater.targetHeading += randomBetween(-0.45, 0.45);
+
+              window.dispatchEvent(new CustomEvent("portfolio-food-eaten", {
+                detail: { id: foodId }
+              }));
+            }
+          }
+        }
+
+        animationFrame = requestAnimationFrame(animateFish);
+      };
+
+      const updateFoodPosition = (detail, summon = false) => {
+        food.active = true;
+        if (summon) {
+          food.dropped = false;
+          food.id = detail.id;
+        }
+        food.x = detail.clientX;
+        food.y = Math.min(
+          detail.clientY + window.scrollY,
+          swimBottom(28)
+        );
+
+        if (!summon) return;
+
+        fishes.forEach((fish, index) => {
+          const screenY = fish.y - window.scrollY;
+          if (screenY > -height * 0.3 && screenY < height * 1.3) return;
+
+          fish.x = index % 2 === 0 ? -fish.size : width + fish.size;
+          fish.y = Math.max(
+            20,
+            Math.min(swimBottom(fish.size * 0.62), food.y + randomBetween(-height * 0.38, height * 0.38))
+          );
+          fish.heading = Math.atan2(food.y - fish.y, food.x - fish.x);
+          fish.targetHeading = fish.heading;
+          fish.burst = 1.15;
+        });
+      };
+
+      window.addEventListener("portfolio-shockwave", (event) => {
+        shockwaves.push({
+          id: performance.now() + Math.random(),
+          x: event.detail.clientX,
+          y: event.detail.clientY + window.scrollY,
+          start: performance.now()
+        });
+      });
+
+      window.addEventListener("portfolio-food-start", (event) => {
+        updateFoodPosition(event.detail, true);
+      });
+
+      window.addEventListener("portfolio-food-move", (event) => {
+        updateFoodPosition(event.detail);
+      });
+
+      window.addEventListener("portfolio-food-drop", (event) => {
+        food.active = true;
+        food.dropped = true;
+        food.id = event.detail.id;
+        food.x = event.detail.clientX;
+        food.y = Math.min(
+          event.detail.clientY + window.scrollY,
+          swimBottom(28)
+        );
+      });
+
+      window.addEventListener("portfolio-food-cancel", () => {
+        food.active = false;
+        food.dropped = false;
+        food.id = null;
+      });
+
+      window.addEventListener("pointermove", (event) => {
+        pointer.active = true;
+        pointer.x = event.clientX;
+        pointer.y = event.clientY;
+        pointer.expires = event.pointerType === "mouse"
+          ? Infinity
+          : performance.now() + 1400;
+      }, { passive: true });
+
+      window.addEventListener("pointerdown", (event) => {
+        pointer.active = true;
+        pointer.x = event.clientX;
+        pointer.y = event.clientY;
+        pointer.expires = performance.now() + 1800;
+      }, { passive: true });
+
+      document.documentElement.addEventListener("mouseleave", () => {
+        pointer.active = false;
+      });
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden && animationFrame) {
+          cancelAnimationFrame(animationFrame);
+          animationFrame = null;
+          previousFrame = 0;
+        } else if (!document.hidden && !animationFrame) {
+          animationFrame = requestAnimationFrame(animateFish);
+        }
+      });
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+      animationFrame = requestAnimationFrame(animateFish);
+    })();
+
+    (() => {
+      let gesture = null;
+      let loosenTimer = null;
+      let holdTimer = null;
+      let suppressClicksUntil = 0;
+      let pendingFood = null;
+      let foodSequence = 0;
+
+      const clearTimers = () => {
+        window.clearTimeout(loosenTimer);
+        window.clearTimeout(holdTimer);
+        loosenTimer = null;
+        holdTimer = null;
+      };
+
+      const randomAsciiCharacter = () => (
+        ANIMATION_SETTINGS.characters[
+          Math.floor(Math.random() * ANIMATION_SETTINGS.characters.length)
+        ]
+      );
+
+      const moveGhost = (clientX, clientY) => {
+        if (!gesture || !gesture.ghost) return;
+        gesture.ghost.style.left = `${clientX}px`;
+        gesture.ghost.style.top = `${clientY}px`;
+      };
+
+      const startLetterDrag = () => {
+        if (!gesture || gesture.dragging) return;
+
+        const { glyph, lastX, lastY } = gesture;
+        const ghost = document.createElement("span");
+        const placeholderColor = ANIMATION_SETTINGS.colors[
+          Math.floor(Math.random() * ANIMATION_SETTINGS.colors.length)
+        ];
+        const glyphStyle = window.getComputedStyle(glyph);
+        const foodId = `letter-${foodSequence += 1}`;
+
+        gesture.dragging = true;
+        gesture.ghost = ghost;
+        gesture.foodId = foodId;
+        document.body.classList.add("is-dragging-letter");
+        glyph.classList.remove("is-loosening", "is-ready-to-pull");
+        glyph.dataset.detached = "true";
+        glyph.className = "ascii-glyph is-placeholder";
+        glyph.textContent = randomAsciiCharacter();
+        glyph.style.setProperty("--ascii-color", placeholderColor);
+
+        ghost.className = "letter-drag-ghost";
+        ghost.textContent = glyph.dataset.character;
+        ghost.style.color = glyphStyle.color;
+        ghost.style.fontFamily = glyphStyle.fontFamily;
+        ghost.style.fontSize = glyphStyle.fontSize;
+        ghost.style.fontWeight = glyphStyle.fontWeight;
+        ghost.style.fontStyle = glyphStyle.fontStyle;
+        ghost.style.lineHeight = glyphStyle.lineHeight;
+        ghost.style.letterSpacing = glyphStyle.letterSpacing;
+        document.body.appendChild(ghost);
+        moveGhost(lastX, lastY);
+
+        window.dispatchEvent(new CustomEvent("portfolio-food-start", {
+          detail: { id: foodId, clientX: lastX, clientY: lastY }
+        }));
+      };
+
+      const finishGesture = (clientX, clientY, cancelled = false) => {
+        if (!gesture) return;
+
+        const { glyph, dragging, ghost, foodId } = gesture;
+        clearTimers();
+        document.body.classList.remove("is-dragging-letter");
+        glyph.classList.remove("is-loosening", "is-ready-to-pull");
+
+        if (dragging) {
+          if (!cancelled) {
+            const droppedWorldY = Math.min(
+              clientY + window.scrollY,
+              PORTFOLIO_SHORE_STATE.worldY - 28
+            );
+            const droppedClientY = droppedWorldY - window.scrollY;
+            ghost.classList.add("is-dropped");
+            ghost.style.left = `${clientX + window.scrollX}px`;
+            ghost.style.top = `${droppedWorldY}px`;
+            pendingFood = { id: foodId, glyph, ghost };
+
+            window.dispatchEvent(new CustomEvent("portfolio-food-drop", {
+              detail: { id: foodId, clientX, clientY: droppedClientY }
+            }));
+          } else {
+            glyph.dataset.detached = "false";
+            glyph.className = "ascii-glyph";
+            glyph.textContent = glyph.dataset.character;
+            glyph.style.removeProperty("--ascii-color");
+            ghost.remove();
+            window.dispatchEvent(new CustomEvent("portfolio-food-cancel"));
+          }
+
+          suppressClicksUntil = performance.now() + 450;
+        }
+
+        gesture = null;
+      };
+
+      document.addEventListener("pointerdown", (event) => {
+        if (event.button !== 0 || gesture || pendingFood) return;
+
+        const glyph = event.target.closest(".ascii-glyph");
+        if (
+          !glyph ||
+          glyph.classList.contains("is-pending") ||
+          glyph.classList.contains("is-scrambling") ||
+          glyph.classList.contains("is-placeholder")
+        ) return;
+
+        gesture = {
+          glyph,
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          lastX: event.clientX,
+          lastY: event.clientY,
+          armed: false,
+          dragging: false,
+          ghost: null
+        };
+
+        loosenTimer = window.setTimeout(() => {
+          if (gesture && gesture.glyph === glyph) glyph.classList.add("is-loosening");
+        }, ANIMATION_SETTINGS.letterLoosenDelay);
+
+        holdTimer = window.setTimeout(() => {
+          if (!gesture || gesture.glyph !== glyph) return;
+          gesture.armed = true;
+          glyph.classList.remove("is-loosening");
+          glyph.classList.add("is-ready-to-pull");
+          const distance = Math.hypot(
+            gesture.lastX - gesture.startX,
+            gesture.lastY - gesture.startY
+          );
+          if (distance >= ANIMATION_SETTINGS.letterDislodgeDistance) startLetterDrag();
+        }, ANIMATION_SETTINGS.letterHoldDelay);
+      });
+
+      document.addEventListener("pointermove", (event) => {
+        if (!gesture || event.pointerId !== gesture.pointerId) return;
+
+        gesture.lastX = event.clientX;
+        gesture.lastY = event.clientY;
+
+        const distance = Math.hypot(
+          event.clientX - gesture.startX,
+          event.clientY - gesture.startY
+        );
+
+        if (!gesture.dragging && gesture.armed && distance >= ANIMATION_SETTINGS.letterDislodgeDistance) {
+          startLetterDrag();
+        }
+
+        if (!gesture.dragging) return;
+
+        event.preventDefault();
+        moveGhost(event.clientX, event.clientY);
+        window.dispatchEvent(new CustomEvent("portfolio-food-move", {
+          detail: { clientX: event.clientX, clientY: event.clientY }
+        }));
+      }, { passive: false });
+
+      document.addEventListener("pointerup", (event) => {
+        if (!gesture || event.pointerId !== gesture.pointerId) return;
+        finishGesture(event.clientX, event.clientY);
+      });
+
+      document.addEventListener("pointercancel", (event) => {
+        if (!gesture || event.pointerId !== gesture.pointerId) return;
+        finishGesture(event.clientX, event.clientY, true);
+      });
+
+      document.addEventListener("click", (event) => {
+        if (performance.now() >= suppressClicksUntil) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }, true);
+
+      window.addEventListener("portfolio-food-eaten", (event) => {
+        if (!pendingFood || pendingFood.id !== event.detail.id) return;
+
+        const { ghost } = pendingFood;
+        ghost.classList.add("is-eaten");
+        window.setTimeout(() => ghost.remove(), 440);
+        pendingFood = null;
+      });
     })();
 
     (() => {
@@ -1352,12 +2230,18 @@
       }
 
       function addRipple(x, y) {
+        if (y + window.scrollY >= PORTFOLIO_SHORE_STATE.worldY) return;
+
         ripples.push({
           x,
           y,
           start: performance.now(),
           seed: Math.random() * Math.PI * 2
         });
+
+        window.dispatchEvent(new CustomEvent("portfolio-shockwave", {
+          detail: { clientX: x, clientY: y }
+        }));
 
         if (ripples.length > maxRipples) {
           ripples = ripples.slice(ripples.length - maxRipples);
@@ -1436,6 +2320,7 @@
 
         for (let row = 0; row <= rows; row++) {
           const y = row * cellH;
+          if (y + window.scrollY >= PORTFOLIO_SHORE_STATE.worldY) continue;
 
           for (let col = 0; col <= columns; col++) {
             if (!active.has(row * (columns + 1) + col)) continue;
