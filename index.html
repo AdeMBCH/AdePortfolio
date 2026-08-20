@@ -38,18 +38,6 @@
       box-sizing: border-box;
     }
 
-    ::selection {
-      background: var(--black);
-      color: #ffffff;
-      text-shadow: none;
-    }
-
-    ::-moz-selection {
-      background: var(--black);
-      color: #ffffff;
-      text-shadow: none;
-    }
-
     html {
       scroll-behavior: smooth;
       background: #ffffff;
@@ -59,6 +47,9 @@
     body {
       margin: 0;
       min-height: 100vh;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
       color: var(--text);
       font-family: var(--font);
       font-size: 15px;
@@ -286,7 +277,7 @@
     .toc-title .ascii-frame {
       display: inline-block;
       min-width: 3.2ch;
-      color: #0891b2;
+      color: #06a6a6;
       font-weight: 400;
       white-space: pre;
       transition: color 320ms ease;
@@ -406,6 +397,21 @@
       margin-top: 0.5rem;
       color: var(--muted);
       font-size: 12px;
+    }
+
+    .demo-link {
+      display: block;
+      font-weight: inherit;
+    }
+
+    .demo-link:hover,
+    .demo-link:focus-visible {
+      text-decoration: none;
+    }
+
+    .demo-link:hover figcaption,
+    .demo-link:focus-visible figcaption {
+      color: #06a6a6;
     }
 
     .gif-hover-preview {
@@ -616,38 +622,52 @@
 
       <div class="demo-showcase" aria-label="Project demonstrations">
         <figure>
-          <img src="./zones.gif" alt="Semantic navigation zones configured on a humanoid robot map" loading="lazy" decoding="async">
-          <figcaption>Navigation zones @ Enchanted Tools</figcaption>
+          <a class="demo-link" href="#experience">
+            <img src="./zones.gif" alt="Semantic navigation zones configured on a humanoid robot map" loading="eager" decoding="async">
+            <figcaption>Navigation zones @ Enchanted Tools</figcaption>
+          </a>
         </figure>
 
         <figure>
-          <img src="./reloc.gif" alt="Humanoid robot relocalized from a visual landmark" loading="lazy" decoding="async">
-          <figcaption>Visual-landmark relocalization @ Enchanted Tools</figcaption>
+          <a class="demo-link" href="#experience">
+            <img src="./reloc.gif" alt="Humanoid robot relocalized from a visual landmark" loading="eager" decoding="async">
+            <figcaption>Visual-landmark relocalization @ Enchanted Tools</figcaption>
+          </a>
         </figure>
 
         <figure>
-          <img src="./odomradar.gif" alt="Radar odometry running on a French Robotics Cup robot" loading="lazy" decoding="async">
-          <figcaption>Radar DVL-inspired odometry</figcaption>
+          <a class="demo-link" href="#competitive-robotics">
+            <img src="./odomradar.gif" alt="Radar odometry running on a French Robotics Cup robot" loading="eager" decoding="async">
+            <figcaption>Radar DVL-inspired odometry</figcaption>
+          </a>
         </figure>
 
         <figure>
-          <img src="./fipatech.gif" alt="FIPATECH robot localization and navigation test for the French Robotics Cup" loading="lazy" decoding="async">
-          <figcaption>Localization and Navigation</figcaption>
+          <a class="demo-link" href="#competitive-robotics">
+            <img src="./fipatech.gif" alt="FIPATECH robot localization and navigation test for the French Robotics Cup" loading="eager" decoding="async">
+            <figcaption>Localization and Navigation</figcaption>
+          </a>
         </figure>
 
         <figure>
-          <img src="./fishevit.gif" alt="Autonomous robotic fish performing obstacle avoidance in a pool" loading="lazy" decoding="async">
-          <figcaption>Autonomous robot fish</figcaption>
+          <a class="demo-link" href="#project-fish">
+            <img src="./fishevit.gif" alt="Autonomous robotic fish performing obstacle avoidance in a pool" loading="eager" decoding="async">
+            <figcaption>Autonomous robot fish</figcaption>
+          </a>
         </figure>
 
         <figure>
-          <img src="./Suivifurtif.gif" alt="Underwater target recognition for autonomous stealth tracking" loading="lazy" decoding="async">
-          <figcaption>Target recognition for stealth tracking</figcaption>
+          <a class="demo-link" href="#project-bluerov">
+            <img src="./Suivifurtif.gif" alt="Underwater target recognition for autonomous stealth tracking" loading="lazy" decoding="async">
+            <figcaption>Target recognition for stealth tracking</figcaption>
+          </a>
         </figure>
 
         <figure>
-          <img src="./brasdugardien.gif" alt="RoboCup goalkeeper robot operating its interception arm" loading="lazy" decoding="async">
-          <figcaption>RoboCup Goalkeeper interception arm</figcaption>
+          <a class="demo-link" href="#competitive-robotics">
+            <img src="./brasdugardien.gif" alt="RoboCup goalkeeper robot operating its interception arm" loading="lazy" decoding="async">
+            <figcaption>RoboCup Goalkeeper interception arm</figcaption>
+          </a>
         </figure>
       </div>
 
@@ -710,9 +730,9 @@
           <div class="section-body">
             <p><strong>CADVM:</strong> local-first, Git-like version control for CAD files with geometric diffing and 3D visualization, built in Rust and C++ with Open CASCADE. <a class="external" href="https://adembch.github.io/cadvm/introduction.html" target="_blank" rel="noopener noreferrer">[site]</a></p>
 
-            <p><strong>Autonomous robotic fish:</strong> complete mechatronic design for maritime monitoring, including CAD, ESP32/FreeRTOS firmware, caudal propulsion, obstacle avoidance, and UART communication. <a class="external" href="./portfolio/assets/pdf/Rapport_Projet_2A_BIECHE.pdf" target="_blank" rel="noopener noreferrer">[report]</a> <a class="external" href="./fish.gif" target="_blank" rel="noopener noreferrer">[demo]</a></p>
+            <p id="project-fish"><strong>Autonomous robotic fish:</strong> complete mechatronic design for maritime monitoring, including CAD, ESP32/FreeRTOS firmware, caudal propulsion, obstacle avoidance, and UART communication. <a class="external" href="./portfolio/assets/pdf/Rapport_Projet_2A_BIECHE.pdf" target="_blank" rel="noopener noreferrer">[report]</a> <a class="external" href="./fish.gif" target="_blank" rel="noopener noreferrer">[demo]</a></p>
 
-            <p><strong>BlueROV target tracking:</strong> autonomous underwater target tracking for the COSMER laboratory using ROS 2 visual servoing. <a class="external" href="./portfolio/assets/pdf/project1.pdf" target="_blank" rel="noopener noreferrer">[poster]</a> <a class="external" href="https://youtu.be/euJ4Qvtss9w" target="_blank" rel="noopener noreferrer">[video]</a></p>
+            <p id="project-bluerov"><strong>BlueROV target tracking:</strong> autonomous underwater target tracking for the COSMER laboratory using ROS 2 visual servoing. <a class="external" href="./portfolio/assets/pdf/project1.pdf" target="_blank" rel="noopener noreferrer">[poster]</a> <a class="external" href="https://youtu.be/euJ4Qvtss9w" target="_blank" rel="noopener noreferrer">[video]</a></p>
 
             <p><strong>Holonomic mobile robot:</strong> design, programming, integration, and supervision of an autonomous robot with a holonomic drive base.</p>
 
@@ -822,6 +842,53 @@
   </div>
 
   <script>
+    const ANIMATION_SETTINGS = Object.freeze({
+      colors: Object.freeze(["#2563eb", "#06a6a6", "#10b981"]),
+      characters: Object.freeze([
+        "░", "▒", "▓", ".", ":", "~", "-", "=", "+", "*", "#", "@",
+        "%", "&", "0", "/", "\\", "<", ">", "[", "]", "{", "}"
+      ]),
+      mobileBreakpoint: 760,
+      imageDuration: 4000,
+      textDuration: 3200,
+      textPhases: 72,
+      mobileTextPhases: 40,
+      textScrambleWidth: 0.2,
+      gifFrameInterval: 40,
+      mobileGifFrameInterval: 70,
+      desktopGifColumns: 14,
+      mobileGifColumns: 7,
+      desktopGifMinRows: 6,
+      mobileGifMinRows: 4,
+      maxCanvasPixelRatio: 2,
+      mobileCanvasPixelRatio: 1,
+      revealDistanceRatio: 0.42,
+      minRevealDistance: 300,
+      maxRevealDistance: 520,
+      textRevealInset: 112,
+      textRevealInsetRatio: 0.14,
+      imageRevealInset: 16,
+      imageRevealInsetRatio: 0.02,
+      landingReveal: 0.34,
+      landingImageCount: 5,
+      footerCompletionDistance: 180,
+      rippleCharacters: Object.freeze([" ", ".", ":", "-", "~", "+", "*", "o", "O", "0", "#", "@"]),
+      rippleLifespan: 2600,
+      rippleWaveSpeed: 0.34,
+      rippleRingWidth: 22,
+      rippleLimit: 14,
+      indexWaveInterval: 420
+    });
+
+    (() => {
+      const blockClipboard = (event) => event.preventDefault();
+
+      document.addEventListener("copy", blockClipboard);
+      document.addEventListener("cut", blockClipboard);
+      document.addEventListener("paste", blockClipboard);
+      document.addEventListener("dragstart", blockClipboard);
+    })();
+
     (() => {
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -831,11 +898,8 @@
       const textTargets = [...document.querySelectorAll(
         ".demo-showcase figcaption, .section, .contact-section > *"
       )];
-      const characters = [
-        "░", "▒", "▓", ".", ":", "~", "-", "=", "+", "*", "#", "@",
-        "%", "&", "0", "/", "\\", "<", ">", "[", "]", "{", "}"
-      ];
-      const colors = ["#2563eb", "#0891b2", "#06a6a6", "#10b981", "#38bdf8"];
+      const { characters, colors } = ANIMATION_SETTINGS;
+      const isMobileViewport = () => window.innerWidth <= ANIMATION_SETTINGS.mobileBreakpoint;
       let revealAnimationFrame = null;
       let previousRevealTime = 0;
       let previousGifRender = 0;
@@ -884,7 +948,10 @@
         if (!context) return;
 
         const rect = frame.getBoundingClientRect();
-        const pixelRatio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        const maxPixelRatio = isMobileViewport()
+          ? ANIMATION_SETTINGS.mobileCanvasPixelRatio
+          : ANIMATION_SETTINGS.maxCanvasPixelRatio;
+        const pixelRatio = Math.max(1, Math.min(maxPixelRatio, window.devicePixelRatio || 1));
         const width = Math.max(1, Math.round(rect.width));
         const height = Math.max(1, Math.round(rect.height));
         const requiredWidth = Math.round(width * pixelRatio);
@@ -909,8 +976,13 @@
 
         if (!image.complete || !image.naturalWidth || progress <= 0) return;
 
-        const columns = width < 180 ? 10 : 14;
-        const rows = Math.max(6, Math.round(columns * height / width));
+        const columns = isMobileViewport()
+          ? ANIMATION_SETTINGS.mobileGifColumns
+          : ANIMATION_SETTINGS.desktopGifColumns;
+        const minimumRows = isMobileViewport()
+          ? ANIMATION_SETTINGS.mobileGifMinRows
+          : ANIMATION_SETTINGS.desktopGifMinRows;
+        const rows = Math.max(minimumRows, Math.round(columns * height / width));
         const tileWidth = width / columns;
         const tileHeight = height / rows;
         const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
@@ -1033,8 +1105,14 @@
         animation.renderedProgress = progress;
 
         const { glyphs } = animation;
-        const scrambleWidth = 0.2;
-        const phase = Math.floor(progress * 72);
+        const scrambleWidth = ANIMATION_SETTINGS.textScrambleWidth;
+        const phaseCount = isMobileViewport()
+          ? ANIMATION_SETTINGS.mobileTextPhases
+          : ANIMATION_SETTINGS.textPhases;
+        const phase = Math.floor(progress * phaseCount);
+
+        if (animation.renderedPhase === phase && progress < 1) return;
+        animation.renderedPhase = phase;
 
         glyphs.forEach((glyph) => {
           const threshold = Number(glyph.dataset.threshold);
@@ -1073,7 +1151,10 @@
           if (!animation.triggered) return;
 
           if (animation.progress < 1) {
-            animation.progress = Math.min(1, animation.progress + delta / 4000);
+            animation.progress = Math.min(
+              1,
+              animation.progress + delta / ANIMATION_SETTINGS.imageDuration
+            );
             hasActiveReveal = animation.progress < 1 || hasActiveReveal;
             hasActiveGif = animation.progress < 1 || hasActiveGif;
           }
@@ -1083,14 +1164,21 @@
           if (!animation.triggered) return;
 
           if (animation.progress < 1) {
-            animation.progress = Math.min(1, animation.progress + delta / 3200);
+            animation.progress = Math.min(
+              1,
+              animation.progress + delta / ANIMATION_SETTINGS.textDuration
+            );
             hasActiveReveal = animation.progress < 1 || hasActiveReveal;
           }
 
           updateTextTarget(animation, animation.progress);
         });
 
-        if (timestamp - previousGifRender >= 40 || !hasActiveGif) {
+        const gifFrameInterval = isMobileViewport()
+          ? ANIMATION_SETTINGS.mobileGifFrameInterval
+          : ANIMATION_SETTINGS.gifFrameInterval;
+
+        if (timestamp - previousGifRender >= gifFrameInterval || !hasActiveGif) {
           imageAnimations.forEach(renderImageTiles);
           previousGifRender = timestamp;
         }
@@ -1116,10 +1204,24 @@
         const viewportHeight = window.innerHeight;
         const documentHeight = document.documentElement.scrollHeight;
         const remainingScroll = documentHeight - (window.scrollY + viewportHeight);
-        const pageEndProgress = smoothstep(1 - remainingScroll / 180);
-        const revealDistance = Math.min(520, Math.max(300, viewportHeight * 0.42));
-        const revealInset = Math.min(112, viewportHeight * 0.14);
-        const imageRevealInset = Math.min(16, viewportHeight * 0.02);
+        const pageEndProgress = smoothstep(
+          1 - remainingScroll / ANIMATION_SETTINGS.footerCompletionDistance
+        );
+        const revealDistance = Math.min(
+          ANIMATION_SETTINGS.maxRevealDistance,
+          Math.max(
+            ANIMATION_SETTINGS.minRevealDistance,
+            viewportHeight * ANIMATION_SETTINGS.revealDistanceRatio
+          )
+        );
+        const revealInset = Math.min(
+          ANIMATION_SETTINGS.textRevealInset,
+          viewportHeight * ANIMATION_SETTINGS.textRevealInsetRatio
+        );
+        const imageRevealInset = Math.min(
+          ANIMATION_SETTINGS.imageRevealInset,
+          viewportHeight * ANIMATION_SETTINGS.imageRevealInsetRatio
+        );
 
         imageAnimations.forEach((animation) => {
           const rect = animation.frame.getBoundingClientRect();
@@ -1127,8 +1229,10 @@
             (viewportHeight - imageRevealInset - rect.top) / revealDistance
           );
 
-          if (animation.targetIndex < 5) {
-            const landingReveal = clamp(0.34 - window.scrollY / revealDistance);
+          if (animation.targetIndex < ANIMATION_SETTINGS.landingImageCount) {
+            const landingReveal = clamp(
+              ANIMATION_SETTINGS.landingReveal - window.scrollY / revealDistance
+            );
             entering = Math.max(entering, landingReveal);
           }
 
@@ -1201,7 +1305,8 @@
 
       if (!ctx) return;
 
-      const chars = [" ", ".", ":", "-", "~", "+", "*", "o", "O", "0", "#", "@"];
+      const chars = ANIMATION_SETTINGS.rippleCharacters;
+      const rippleColors = ANIMATION_SETTINGS.colors;
 
       let width = 0;
       let height = 0;
@@ -1214,10 +1319,10 @@
       let ripples = [];
       let animationFrame = null;
 
-      const maxRipples = 14;
-      const lifespan = 2600;
-      const waveSpeed = 0.34;
-      const ringWidth = 22;
+      const maxRipples = ANIMATION_SETTINGS.rippleLimit;
+      const lifespan = ANIMATION_SETTINGS.rippleLifespan;
+      const waveSpeed = ANIMATION_SETTINGS.rippleWaveSpeed;
+      const ringWidth = ANIMATION_SETTINGS.rippleRingWidth;
       // A ripple's energy is negligible beyond this distance from its wavefront,
       // so cells outside the band can be skipped without changing the render.
       const ringReach = ringWidth * 4;
@@ -1354,10 +1459,10 @@
             if (energy > 0.09) {
               const saturatedEnergy = Math.min(1, energy);
               const char = getCharacter(saturatedEnergy, x, y, now);
-              const hue = 185 + 25 * Math.sin(x * 0.012 + y * 0.008 - now * 0.0018);
+              const colorPhase = Math.floor(x * 0.018 + y * 0.013 - now * 0.0025);
 
               ctx.globalAlpha = Math.min(0.46, 0.08 + saturatedEnergy * 0.52);
-              ctx.fillStyle = `hsl(${hue.toFixed(1)} 78% 42%)`;
+              ctx.fillStyle = rippleColors[Math.abs(colorPhase) % rippleColors.length];
               ctx.fillText(char, x, y);
             }
           }
@@ -1394,7 +1499,7 @@
         ["-+-", "-+-"],
         ["_~_", "_~_"]
       ];
-      const colors = ["#2563eb", "#0891b2", "#06a6a6", "#10b981", "#38bdf8"];
+      const colors = ANIMATION_SETTINGS.colors;
 
       let index = 0;
       asciiLeft.style.color = colors[0];
@@ -1406,7 +1511,7 @@
         asciiRight.textContent = frames[index][1];
         asciiLeft.style.color = colors[index % colors.length];
         asciiRight.style.color = colors[(index + 2) % colors.length];
-      }, 420);
+      }, ANIMATION_SETTINGS.indexWaveInterval);
     })();
 
     (() => {
