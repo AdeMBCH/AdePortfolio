@@ -146,6 +146,7 @@
       width: 148px;
       height: 96px;
       position: relative;
+      transform: translateY(-1rem);
       text-decoration: none;
       cursor: pointer;
       overflow: visible;
@@ -191,9 +192,16 @@
     .hero {
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 9rem 1.5rem 5rem;
+      gap: 1.5rem;
+      padding: 7rem 1.5rem 2rem;
+    }
+
+    .hero > .section {
+      width: min(980px, 100%);
+      padding: 0;
     }
 
     .toc {
@@ -227,7 +235,7 @@
     .toc-title {
       display: grid;
       grid-template-columns: auto auto auto;
-      justify-content: start;
+      justify-content: center;
       align-items: baseline;
       gap: 0.45rem;
       margin-bottom: 0.75rem;
@@ -261,7 +269,7 @@
       display: grid;
       grid-template-columns: 190px 1fr;
       gap: 2.8rem;
-      padding: 1.45rem 0;
+      padding: 1.65rem 0;
     }
 
     .section-title {
@@ -278,6 +286,92 @@
 
     .section-body p {
       margin: 0 0 0.85rem;
+    }
+
+    .experience-line {
+      margin-bottom: 0.45rem !important;
+    }
+
+    .experience-role {
+      color: var(--text);
+      font-weight: 400;
+    }
+
+    .experience-date {
+      color: var(--muted);
+    }
+
+    #projects .section-body p,
+    #additional-experience .section-body p {
+      margin-bottom: 0.55rem;
+    }
+
+    .demo-showcase {
+      display: grid;
+      grid-template-columns: repeat(10, minmax(0, 1fr));
+      gap: 1rem;
+      width: min(1200px, 100%);
+      margin: 0;
+    }
+
+    .demo-showcase figure {
+      grid-column: span 2;
+      margin: 0;
+    }
+
+    .demo-showcase figure:nth-child(-n + 5) {
+      grid-row: 1;
+    }
+
+    .demo-showcase .demo-showcase-featured {
+      grid-column: 4 / span 2;
+      grid-row: 2;
+    }
+
+    .demo-showcase .demo-showcase-keeper {
+      grid-column: 6 / span 2;
+      grid-row: 2;
+    }
+
+    .demo-showcase img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+      background: #f3f3f3;
+    }
+
+    .demo-showcase figcaption {
+      margin-top: 0.5rem;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .gif-hover-preview {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      padding: 1.5rem;
+      pointer-events: none;
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 140ms ease, visibility 140ms ease;
+    }
+
+    .gif-hover-preview.is-visible {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .gif-hover-preview img {
+      width: auto;
+      height: auto;
+      max-width: calc(100vw - 3rem);
+      max-height: calc(100vh - 3rem);
+      background: #ffffff;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.24);
     }
 
     .contact-section {
@@ -330,10 +424,12 @@
         justify-self: center;
         width: 132px;
         height: 88px;
+        transform: translateY(-0.5rem);
       }
 
       .hero {
         padding-top: 9rem;
+        gap: 1.5rem;
       }
 
       .toc {
@@ -348,11 +444,25 @@
       .section {
         grid-template-columns: 1fr;
         gap: 0.45rem;
-        padding: 1.25rem 0;
+        padding: 1.3rem 0;
       }
 
       .section-title {
         margin-bottom: 0.15rem;
+      }
+
+      .demo-showcase {
+        grid-template-columns: repeat(10, 110px);
+        width: calc(100% + 2.5rem);
+        margin-inline: -1.25rem;
+        padding: 0 1.25rem 0.8rem;
+        gap: 0.8rem;
+        overflow-x: auto;
+        scroll-snap-type: x proximity;
+      }
+
+      .demo-showcase figure {
+        scroll-snap-align: start;
       }
     }
   </style>
@@ -400,10 +510,6 @@
             </li>
 
             <li class="toc-item">
-              <a href="#skills">skills</a>
-            </li>
-
-            <li class="toc-item">
               <a href="#projects">projects</a>
             </li>
 
@@ -420,9 +526,7 @@
             </li>
           </ul>
         </nav>
-      </section>
 
-      <div class="content">
         <section class="section" id="about" aria-labelledby="about-title">
           <h2 class="section-title" id="about-title">about</h2>
 
@@ -438,39 +542,62 @@
           </div>
         </section>
 
+        <div class="demo-showcase" aria-label="Project demonstrations">
+        <figure>
+          <img src="./zones.gif" alt="Semantic navigation zones configured on a humanoid robot map" loading="lazy" decoding="async">
+          <figcaption>Navigation zones @ Enchanted Tools</figcaption>
+        </figure>
+
+        <figure>
+          <img src="./reloc.gif" alt="Humanoid robot relocalized from a visual landmark" loading="lazy" decoding="async">
+          <figcaption>Visual-landmark relocalization @ Enchanted Tools</figcaption>
+        </figure>
+
+        <figure>
+          <img src="./odomradar.gif" alt="Radar odometry running on a French Robotics Cup robot" loading="lazy" decoding="async">
+          <figcaption>Radar DVL-inspired odometry</figcaption>
+        </figure>
+
+        <figure>
+          <img src="./fipatech.gif" alt="FIPATECH robot localization and navigation test for the French Robotics Cup" loading="lazy" decoding="async">
+          <figcaption>Localization and Navigation</figcaption>
+        </figure>
+
+        <figure>
+          <img src="./fishevit.gif" alt="Autonomous robotic fish performing obstacle avoidance in a pool" loading="lazy" decoding="async">
+          <figcaption>Autonomous robot fish</figcaption>
+        </figure>
+
+        <figure class="demo-showcase-featured">
+          <img src="./Suivifurtif.gif" alt="Underwater target recognition for autonomous stealth tracking" loading="lazy" decoding="async">
+          <figcaption>Target recognition for stealth tracking</figcaption>
+        </figure>
+
+        <figure class="demo-showcase-keeper">
+          <img src="./brasdugardien.gif" alt="RoboCup goalkeeper robot operating its interception arm" loading="lazy" decoding="async">
+          <figcaption>RoboCup Goalkeeper interception arm</figcaption>
+        </figure>
+        </div>
+      </section>
+
+      <div class="gif-hover-preview" id="gifHoverPreview" aria-hidden="true">
+        <img id="gifHoverPreviewImage" alt="">
+      </div>
+
+      <div class="content">
         <section class="section" id="experience" aria-labelledby="experience-title">
           <h2 class="section-title" id="experience-title">experience</h2>
 
           <div class="section-body">
-            <p>
-              <a class="external" href="https://fr.mathworks.com/?s_tid=gn_logo" target="_blank" rel="noopener noreferrer">MathWorks</a>,
-              <strong>MATLAB Student Ambassador @ ENSTA</strong> (September 2026 - June 2027)
-              <br>
-            </p>
-            <p>
-              <a class="external" href="https://enchanted.tools/" target="_blank" rel="noopener noreferrer">Enchanted Tools</a>,
-              <strong>Robotics Navigation R&amp;D Engineer Intern</strong> (May 2026 - September 2026, Paris)
-              <br>Audited the navigation stack of Mirokai robots, worked on mapping, door and elevator detection, and improved real-time performance.
-            </p>
+            <p class="experience-line"><a class="external" href="https://fr.mathworks.com/?s_tid=gn_logo" target="_blank" rel="noopener noreferrer">MathWorks</a>, <span class="experience-role">MATLAB Student Ambassador @ ENSTA</span> <span class="experience-date">(Sept. 2026–June 2027 · upcoming)</span></p>
 
-            <p>
-              <a class="external" href="https://ensta.fr/" target="_blank" rel="noopener noreferrer">ENSTA - IP Paris</a>,
-              <strong>Teaching Assistant in Robotics, ROS Course and Drone Course</strong> (2025 - 2026, Brest)
-              <br>End-to-end design of the educational robotics platform using ROS 2. Software and network architecture, low-level hardware integration, and provision of a ready-to-use environment for student application development.
-            </p>
+            <p class="experience-line"><a class="external" href="https://enchanted.tools/" target="_blank" rel="noopener noreferrer">Enchanted Tools</a>, <span class="experience-role">R&amp;D Robotics Engineer Intern — Humanoid Navigation</span> <span class="experience-date">(May–Sept. 2026 · Paris)</span></p>
 
-            <p>
-              <a class="external" href="https://www.tus.ac.jp/en/" target="_blank" rel="noopener noreferrer">Tokyo University of Science</a>,
-              <strong>Robotics R&amp;D Assistant Engineer Intern</strong> (April 2025 - August 2025, Tokyo)
-              <br>Designed two functional underwater communication prototypes for a robotic fish, using OpenCV, PyTorch, and Raspberry Pi.
-              <a class="external" href="./portfolio/assets/pdf/CR_Stage_2A_SEatech%20(5).pdf" target="_blank" rel="noopener noreferrer">[report]</a>
-            </p>
+            <p class="experience-line"><a class="external" href="https://ensta.fr/" target="_blank" rel="noopener noreferrer">ENSTA — IP Paris</a>, <span class="experience-role">Robotics Teaching Assistant</span> <span class="experience-date">(Feb.–May 2026 · Brest)</span></p>
 
-            <p>
-              <a class="external" href="https://york-lubricants.com/fr-fr" target="_blank" rel="noopener noreferrer">York Lubricants</a>,
-              <strong>Industrial Internship</strong> (2024, Toulon)
-              <br>Audited the Assembly line.
-            </p>
+            <p class="experience-line"><a class="external" href="https://www.tus.ac.jp/en/" target="_blank" rel="noopener noreferrer">Tokyo University of Science</a>, <span class="experience-role">Robotics R&amp;D Intern</span> <span class="experience-date">(Apr.–Aug. 2025 · Tokyo)</span></p>
+
+            <p class="experience-line"><a class="external" href="https://york-lubricants.com/fr-fr" target="_blank" rel="noopener noreferrer">York Lubricants</a>, <span class="experience-role">Industrial Internship</span> <span class="experience-date">(2024 · Toulon)</span></p>
           </div>
         </section>
 
@@ -478,18 +605,11 @@
           <h2 class="section-title" id="competitive-robotics-title">competitive robotics</h2>
 
           <div class="section-body">
-            <p>
-              <a class="external" href="https://fipatech.fr/" target="_blank" rel="noopener noreferrer">FIPATECH - French Robotics Cup 2026</a>,
-              <strong>ROS2 C++ Developer</strong> (2025 - 2026, Brest)
-              <br>Built a stochastic strategy module that solves an Orienteering Problem, executed through Behavior Trees on Jetson Orin NX with Nav2. Graph Optimization.
-              Improved localization by creating an indoor localization process using radar.
-            </p>
+            <p class="experience-line"><a class="external" href="https://www.robotclubtoulon.fr/" target="_blank" rel="noopener noreferrer">Robot Club de Toulon · RoboCup MSL</a>, <span class="experience-role">Goalkeeper Robot Lead — 2026 World Runner-up</span> <span class="experience-date">(2023–2026 · Toulon)</span></p>
 
-            <p>
-              <a class="external" href="https://www.robotclubtoulon.fr/" target="_blank" rel="noopener noreferrer">Robot Club de Toulon - RoboCup</a>,
-              <strong>Goalkeeper Robot Lead</strong> (2023 - 2026, Toulon)
-              <br>Worked on RoboCup Middle Size League autonomy, 3D LiDAR/OpenCV/SLAM perception, camera-LiDAR fusion, Q-learning, stereovision, and mechatronic integration.
-            </p>
+            <p class="experience-line"><a class="external" href="https://fipatech.fr/" target="_blank" rel="noopener noreferrer">FIPATECH · French Robotics Cup 2026</a>, <span class="experience-role">ROS 2 / C++ Developer — 17th of 89</span> <span class="experience-date">(2025–2026 · Brest)</span></p>
+
+            <p class="experience-line"><strong>Robotics challenges</strong>, <span class="experience-role">Aqua.Bot 2024 — 4th of 20 · SwarmZ 2024 — 4th of 16 · Dassault UAV Challenge 2023 — 5th of 20</span> <span class="experience-date">(2023–2024)</span></p>
           </div>
         </section>
 
@@ -499,7 +619,7 @@
           <div class="section-body">
             <p>
               <strong>Member of the Jury for the Crous Short Story Competition</strong>
-              <br>As a former winner of the Crous Short Story Competition, I was invited to join the jury for the 2026 edition to help assess submissions and contribute to the selection of the winners.
+              <span class="experience-date">(2026)</span>
             </p>
 
             <p>
@@ -508,29 +628,7 @@
 
             <p>
               <strong>President - Student Union (BDE), CPGE LLL</strong>
-              <br>
-            </p>
-          </div>
-        </section>
-
-        <section class="section" id="skills" aria-labelledby="skills-title">
-          <h2 class="section-title" id="skills-title">skills</h2>
-
-          <div class="section-body">
-            <p>
-              <strong>Programming:</strong> Python, C/C++, C#, Rust, Java, SQL, HTML, CSS, Fortran.
-            </p>
-
-            <p>
-              <strong>Robotics and simulation:</strong> ROS/ROS2, Nav2, Gazebo, Matlab, Simulink, STM32CubeIDE
-            </p>
-
-            <p>
-              <strong>Design and tools:</strong> Docker, Git, Inventor, SolidWorks, CatiaV5, KiCad.
-            </p>
-
-            <p>
-              <strong>Languages:</strong> English C1, TOEIC 975/990; German C1, Abitur 1.4; Chinese A2; Japanese A1.
+              <span class="experience-date">(2022 - 2023)</span>
             </p>
           </div>
         </section>
@@ -539,54 +637,23 @@
           <h2 class="section-title" id="projects-title">projects</h2>
 
           <div class="section-body">
-            <p>
-              <strong>CADVM:</strong> local-first, Git-like version control for CAD files with geometric diffing and 3D visualization, built in Rust and C++ (Open CASCADE).
-              <a class="external" href="https://adembch.github.io/cadvm/introduction.html" target="_blank" rel="noopener noreferrer">[site]</a>
-            </p>
+            <p><strong>CADVM:</strong> local-first, Git-like version control for CAD files with geometric diffing and 3D visualization, built in Rust and C++ with Open CASCADE. <a class="external" href="https://adembch.github.io/cadvm/introduction.html" target="_blank" rel="noopener noreferrer">[site]</a></p>
 
-            <p>
-              <strong>Robotic fish:</strong> design of an autonomous robotic fish.
-              <a class="external" href="./portfolio/assets/pdf/Rapport_Projet_2A_BIECHE.pdf" target="_blank" rel="noopener noreferrer">[report]</a>
-              <a class="external" href="./fish.gif" target="_blank" rel="noopener noreferrer">[.gif]</a>
-            </p>
+            <p><strong>Autonomous robotic fish:</strong> complete mechatronic design for maritime monitoring, including CAD, ESP32/FreeRTOS firmware, caudal propulsion, obstacle avoidance, and UART communication. <a class="external" href="./portfolio/assets/pdf/Rapport_Projet_2A_BIECHE.pdf" target="_blank" rel="noopener noreferrer">[report]</a> <a class="external" href="./fish.gif" target="_blank" rel="noopener noreferrer">[demo]</a></p>
 
-            <p>
-              <strong>BlueRov:</strong> autonomous stealth target tracking with an underwater robot for the COSMER laboratory, using visual servoing and ROS2.
-              <a class="external" href="./portfolio/assets/pdf/project1.pdf" target="_blank" rel="noopener noreferrer">[poster]</a>
-              <a class="external" href="https://youtu.be/euJ4Qvtss9w" target="_blank" rel="noopener noreferrer">[video]</a>
-            </p>
+            <p><strong>BlueROV target tracking:</strong> autonomous underwater target tracking for the COSMER laboratory using ROS 2 visual servoing. <a class="external" href="./portfolio/assets/pdf/project1.pdf" target="_blank" rel="noopener noreferrer">[poster]</a> <a class="external" href="https://youtu.be/euJ4Qvtss9w" target="_blank" rel="noopener noreferrer">[video]</a></p>
 
-            <p>
-              <strong>First-year engineering project:</strong> onboard camera alignment tool with sensor fusion, Kalman filtering, and microcontroller-based IMU.
-              <a class="external" href="./portfolio/assets/pdf/CSGROUPPDF.pdf" target="_blank" rel="noopener noreferrer">[report]</a>
-              <a class="external" href="./portfolio/assets/pdf/project2.pdf" target="_blank" rel="noopener noreferrer">[poster]</a>
-            </p>
+            <p><strong>Holonomic mobile robot:</strong> design, programming, integration, and supervision of an autonomous robot with a holonomic drive base.</p>
 
-            <p>
-              <strong>Robot project:</strong> design, programming, and supervision of an autonomous robot with a holonomic base.
-            </p>
+            <p><strong>Tilt-rotor VTOL:</strong> mechatronic design and integration of an aircraft for maritime rescue operations; 5th of 20 at the Dassault UAV Challenge. <a class="external" href="./portfolio/assets/pdf/project3.pdf" target="_blank" rel="noopener noreferrer">[poster]</a> <a class="external" href="./portfolio/assets/pdf/VTOLPDF.pdf" target="_blank" rel="noopener noreferrer">[report]</a></p>
 
-            <p>
-              <strong>Dassault UAV Challenge:</strong> tilt-rotor VTOL drone for sea rescue operations.
-              <a class="external" href="./portfolio/assets/pdf/project3.pdf" target="_blank" rel="noopener noreferrer">[poster]</a>
-              <a class="external" href="./portfolio/assets/pdf/project3.pdf" target="_blank" rel="noopener noreferrer">[report]</a>
-            </p>
+            <p><strong>TurtleBot autonomy:</strong> Python/ROS state machine with autonomous obstacle avoidance. <a class="external" href="https://youtu.be/oNTOCbw7sv8" target="_blank" rel="noopener noreferrer">[video]</a></p>
 
-            <p>
-              <strong>Sharshield:</strong> study of a shark repellent system.
-            </p>
+            <p><strong>Savonius wind turbine:</strong> design, construction, and evaluation of a compact vertical-axis wind turbine for an urban environment. <a class="external" href="./portfolio/assets/pdf/savopdf.pdf" target="_blank" rel="noopener noreferrer">[slides]</a></p>
 
-            <p>
-              <strong>Savonius Windturbine:</strong> design and analysis of a savonius windturbine.
-              <a class="external" href="./portfolio/assets/pdf/savopdf.pdf" target="_blank" rel="noopener noreferrer">[slides]</a>
-            </p>
+            <p><strong>Camera alignment tool — CS Group:</strong> low-cost onboard instrument combining a microcontroller-based IMU, sensor fusion, and Kalman filtering. <a class="external" href="./portfolio/assets/pdf/CSGROUPPDF.pdf" target="_blank" rel="noopener noreferrer">[report]</a> <a class="external" href="./portfolio/assets/pdf/project2.pdf" target="_blank" rel="noopener noreferrer">[poster]</a></p>
 
-            <p>
-              <strong>Turtlebot:</strong> state machine with obstacle avoidance under ROS in Python.
-              <a class="external" href="https://youtu.be/oNTOCbw7sv8" target="_blank" rel="noopener noreferrer">[video]</a>
-              
-            </p>
-            
+            <p><strong>SharkShield study:</strong> evaluation of an electric shark-repellent system under different conditions with the Centre Sécurité Requin of Réunion Island.</p>
           </div>
         </section>
 
@@ -596,14 +663,14 @@
           <div class="section-body">
             <p>
               <strong>ENSTA - IP PARIS</strong>, Autonomous Robotics - Double Degree (2025 - 2027, Brest)
-              <br>Grade : GPA 4.3
+              <br>Grade: GPA 4.0/4.0
               <br>Major : Autonomous robotics (Underwater, Terrestrial, Aerial), Machine Learning, Networks.
               <br>Minor : Entrepreneurship
             </p>
 
             <p>
               <strong>SeaTech Toulon Engineering School</strong>, Mechatronic Systems (2023 - 2027, Toulon)
-              <br> Grade : GPA 4.3
+              <br>Grade: GPA 4.0/4.0
               <br> Major : Mechatronic systems and embedded programming
               <br> Minor : Geopolitics, project management, accounting, and finance.
             </p>
@@ -621,7 +688,12 @@
 
             <p>
               <strong>CROUS short story competition</strong>
-              <br>Winner in 2025 and second place in 2024.
+              <br>Winner in 2025, second place in 2024, and jury member in 2026.
+            </p>
+
+            <p>
+              <strong>RoboCup Middle Size League</strong>
+              <br>2026 world runner-up as goalkeeper robot lead.
             </p>
 
             <p>
@@ -654,7 +726,7 @@
             </p>
 
             <p>
-              <strong>2026</strong> - French Robotics Cup with FIPATECH, ROS/drone teaching, then robotics navigation internship at Enchanted Tools.
+              <strong>2026</strong> - 17th of 89 at the French Robotics Cup with FIPATECH, ROS 2 and UAV teaching at ENSTA, RoboCup MSL world runner-up, then humanoid navigation R&amp;D at Enchanted Tools.
             </p>
           </div>
         </section>
@@ -679,6 +751,33 @@
   </div>
 
   <script>
+    (() => {
+      if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+
+      const preview = document.getElementById("gifHoverPreview");
+      const previewImage = document.getElementById("gifHoverPreviewImage");
+      const thumbnails = document.querySelectorAll(".demo-showcase img");
+
+      if (!preview || !previewImage || !thumbnails.length) return;
+
+      const hidePreview = () => {
+        preview.classList.remove("is-visible");
+      };
+
+      thumbnails.forEach((thumbnail) => {
+        thumbnail.addEventListener("mouseenter", () => {
+          previewImage.src = thumbnail.currentSrc || thumbnail.src;
+          previewImage.alt = thumbnail.alt;
+          preview.classList.add("is-visible");
+        });
+
+        thumbnail.addEventListener("mouseleave", hidePreview);
+      });
+
+      window.addEventListener("blur", hidePreview);
+      window.addEventListener("scroll", hidePreview, { passive: true });
+    })();
+
     (() => {
       const canvas = document.getElementById("asciiRippleCanvas");
       const ctx = canvas.getContext("2d");
