@@ -1191,10 +1191,14 @@
         if (!context) return;
         animation.renderedProgress = progress;
 
-        const rect = frame.getBoundingClientRect();
         const pixelRatio = 1;
-        const width = Math.max(1, Math.round(rect.width));
-        const height = Math.max(1, Math.round(rect.height));
+        if (!animation.width || !animation.height) {
+          const rect = frame.getBoundingClientRect();
+          animation.width = Math.max(1, Math.round(rect.width));
+          animation.height = Math.max(1, Math.round(rect.height));
+        }
+        const width = animation.width;
+        const height = animation.height;
         const requiredWidth = Math.round(width * pixelRatio);
         const requiredHeight = Math.round(height * pixelRatio);
 
@@ -1299,7 +1303,8 @@
             glyph.className = "ascii-glyph is-pending";
             glyph.textContent = character;
             glyph.dataset.character = character;
-            glyph.dataset.seed = targetIndex * 97 + textNodeIndex * 41 + glyphs.length * 17;
+            glyph.asciiSeed = targetIndex * 97 + textNodeIndex * 41 + glyphs.length * 17;
+            glyph.asciiState = 0;
             glyphs.push(glyph);
             visualCopy.appendChild(glyph);
           });
@@ -1309,8 +1314,8 @@
 
           glyphs.forEach((glyph, index) => {
             const readingOrder = glyphs.length > 1 ? index / (glyphs.length - 1) : 0;
-            const jitter = ((Number(glyph.dataset.seed) % 19) / 19) * 0.18;
-            glyph.dataset.threshold = Math.min(0.82, readingOrder * 0.58 + jitter).toFixed(3);
+            const jitter = ((glyph.asciiSeed % 19) / 19) * 0.18;
+            glyph.asciiThreshold = Math.min(0.82, readingOrder * 0.58 + jitter);
           });
 
           animations.push({
@@ -1325,9 +1330,15 @@
         return animations;
       };
 
-      const textAnimations = [];
+      const textGroups = new Map();
+      const activeTextAnimations = new Set();
+      const contactTextAnimations = [];
       const prepareVisibleText = (target, index) => {
-        textAnimations.push(...prepareTextTarget(target, index));
+        const animations = prepareTextTarget(target, index);
+        if (target.closest(".contact-section")) {
+          contactTextAnimations.push(...animations);
+        }
+        textGroups.set(target, animations);
         requestRevealUpdate();
       };
 
@@ -1343,7 +1354,11 @@
         textTargets.forEach((target) => textObserver.observe(target));
       } else {
         textTargets.forEach((target, index) => {
-          textAnimations.push(...prepareTextTarget(target, index));
+          const animations = prepareTextTarget(target, index);
+          if (target.closest(".contact-section")) {
+            contactTextAnimations.push(...animations);
+          }
+          textGroups.set(target, animations);
         });
       }
 
@@ -1364,23 +1379,28 @@
         glyphs.forEach((glyph) => {
           if (glyph.dataset.detached === "true") return;
 
-          const threshold = Number(glyph.dataset.threshold);
+          const threshold = glyph.asciiThreshold;
           const localProgress = (progress - threshold) / scrambleWidth;
 
           if (localProgress <= 0) {
+            if (glyph.asciiState === 0) return;
+            glyph.asciiState = 0;
             glyph.className = "ascii-glyph is-pending";
             glyph.textContent = glyph.dataset.character;
             return;
           }
 
           if (localProgress < 1) {
-            const seed = Number(glyph.dataset.seed) + phase;
+            const seed = glyph.asciiSeed + phase;
+            glyph.asciiState = 1;
             glyph.className = "ascii-glyph is-scrambling";
             glyph.style.setProperty("--ascii-color", colors[Math.abs(seed) % colors.length]);
             glyph.textContent = characters[Math.abs(seed * 7 + phase * 5) % characters.length];
             return;
           }
 
+          if (glyph.asciiState === 2) return;
+          glyph.asciiState = 2;
           glyph.className = "ascii-glyph";
           glyph.style.removeProperty("--ascii-color");
           glyph.textContent = glyph.dataset.character;
@@ -1409,9 +1429,7 @@
           }
         });
 
-        textAnimations.forEach((animation) => {
-          if (!animation.triggered) return;
-
+        activeTextAnimations.forEach((animation) => {
           if (animation.progress < 1) {
             animation.progress = Math.min(
               1,
@@ -1421,6 +1439,7 @@
           }
 
           updateTextTarget(animation, animation.progress);
+          if (animation.progress >= 1) activeTextAnimations.delete(animation);
         });
 
         const gifFrameInterval = isMobileViewport()
@@ -1453,8 +1472,7 @@
       window.addEventListener("portfolio-shore-wave", (event) => {
         if (event.detail.direction !== "down") return;
 
-        textAnimations.forEach((animation) => {
-          if (!animation.target.closest(".contact-section")) return;
+        contactTextAnimations.forEach((animation) => {
           if (animation.lastShoreCycle === event.detail.cycle) return;
 
           const rect = animation.target.getBoundingClientRect();
@@ -1467,6 +1485,7 @@
           animation.renderedProgress = -1;
           animation.renderedPhase = -1;
           animation.triggered = true;
+          activeTextAnimations.add(animation);
           updateTextTarget(animation, 0);
         });
 
@@ -1513,21 +1532,31 @@
           animation.progress = Math.max(animation.progress, entering);
         });
 
-        textAnimations.forEach((animation) => {
-          const rect = animation.target.getBoundingClientRect();
+        textGroups.forEach((animations, target) => {
+          if (!animations.length) return;
+          const rect = target.getBoundingClientRect();
           let entering = smoothstep(
             (viewportHeight - revealInset - rect.top) / revealDistance
           );
-          const shoreReplayIsActive = performance.now() < (animation.shoreReplayUntil || 0);
+          const isContactTarget = Boolean(target.closest(".contact-section"));
 
-          if (animation.target.closest(".contact-section") && !shoreReplayIsActive) {
-            entering = Math.max(entering, pageEndProgress);
-          }
+          animations.forEach((animation) => {
+            const shoreReplayIsActive = performance.now() < (animation.shoreReplayUntil || 0);
 
-          if (!shoreReplayIsActive) {
-            if (entering > 0.005) animation.triggered = true;
-            animation.progress = Math.max(animation.progress, entering);
-          }
+            let animationEntering = entering;
+            if (isContactTarget && !shoreReplayIsActive) {
+              animationEntering = Math.max(animationEntering, pageEndProgress);
+            }
+
+            if (!shoreReplayIsActive) {
+              if (animationEntering > 0.005) animation.triggered = true;
+              animation.progress = Math.max(animation.progress, animationEntering);
+              if (
+                animation.triggered &&
+                animation.renderedProgress !== animation.progress
+              ) activeTextAnimations.add(animation);
+            }
+          });
         });
 
         requestRevealRender();
@@ -1545,6 +1574,8 @@
       window.addEventListener("resize", () => {
         imageAnimations.forEach((animation) => {
           animation.renderedProgress = -1;
+          animation.width = 0;
+          animation.height = 0;
         });
         requestRevealUpdate();
       });
@@ -1562,11 +1593,14 @@
       const foamCharacters = ["~", "-", ".", ":", "o", "*", "+"];
       let width = 0;
       let height = 0;
+      let sectionWorldTop = 0;
       let pixelRatio = 1;
       let active = false;
       let activation = 0;
       let cycleStart = 0;
       let previousFrame = 0;
+      let previousShoreEventTime = 0;
+      let previousShoreEventY = -Infinity;
       let animationFrame = null;
 
       const easeInOut = (value) => (
@@ -1579,6 +1613,7 @@
         const rect = section.getBoundingClientRect();
         width = Math.max(1, Math.round(rect.width));
         height = Math.max(1, Math.round(rect.height));
+        sectionWorldTop = rect.top + window.scrollY;
         pixelRatio = Math.max(
           1,
           Math.min(
@@ -1595,13 +1630,15 @@
         context.textAlign = "center";
         context.textBaseline = "middle";
         context.font = `11px ${getComputedStyle(document.documentElement).getPropertyValue("--font")}`;
-        PORTFOLIO_SHORE_STATE.worldY = rect.top + window.scrollY +
+        PORTFOLIO_SHORE_STATE.worldY = sectionWorldTop +
           height * ANIMATION_SETTINGS.shoreEndRatio;
       };
 
       const noise = (seed) => {
-        const value = Math.sin(seed * 12.9898) * 43758.5453;
-        return value - Math.floor(value);
+        let value = (Math.floor(seed) | 0) + 0x6d2b79f5;
+        value = Math.imul(value ^ (value >>> 15), value | 1);
+        value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+        return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
       };
 
       const drawFoamField = (baseY, timestamp, cycle, intensity) => {
@@ -1612,14 +1649,14 @@
         const lastRow = Math.ceil((baseY + bandRadius) / cellSize);
         const columnCount = Math.ceil(width / cellSize);
 
-        for (let row = firstRow; row <= lastRow; row += 1) {
-          const y = row * cellSize;
+        for (let column = 0; column <= columnCount; column += 1) {
+          const x = column * cellSize;
+          const curve = baseY +
+            Math.sin(column * 0.31 + timestamp * 0.0009) * 13 +
+            Math.sin(column * 0.09 - timestamp * 0.00055) * 7;
 
-          for (let column = 0; column <= columnCount; column += 1) {
-            const x = column * cellSize;
-            const curve = baseY +
-              Math.sin(column * 0.31 + timestamp * 0.0009) * 13 +
-              Math.sin(column * 0.09 - timestamp * 0.00055) * 7;
+          for (let row = firstRow; row <= lastRow; row += 1) {
+            const y = row * cellSize;
             const distance = Math.abs(y - curve);
             const envelope = Math.max(0, 1 - distance / bandRadius);
             const seed = Math.abs(column * 43 + row * 71 + cycle * 101);
@@ -1684,11 +1721,18 @@
           drawFoamField(baseY, timestamp, cycle, intensity);
           context.globalAlpha = 1;
 
-          const sectionWorldTop = section.getBoundingClientRect().top + window.scrollY;
           PORTFOLIO_SHORE_STATE.active = true;
           PORTFOLIO_SHORE_STATE.worldY = sectionWorldTop + baseY;
 
-          if (isAdvancing) {
+          if (
+            isAdvancing &&
+            (
+              timestamp - previousShoreEventTime >= 80 ||
+              Math.abs(sectionWorldTop + baseY - previousShoreEventY) >= 9
+            )
+          ) {
+            previousShoreEventTime = timestamp;
+            previousShoreEventY = sectionWorldTop + baseY;
             window.dispatchEvent(new CustomEvent("portfolio-shore-wave", {
               detail: {
                 cycle: `${activation}-${cycle}`,
@@ -1734,8 +1778,7 @@
       const context = canvas ? canvas.getContext("2d") : null;
       if (!canvas || !context) return;
 
-      const sprite = document.createElement("canvas");
-      const spriteContext = sprite.getContext("2d");
+      const spriteCache = new Map();
       const pointer = { active: false, x: 0, y: 0, expires: 0 };
       const food = { active: false, dropped: false, id: null, x: 0, y: 0 };
       const shockwaves = [];
@@ -1745,10 +1788,9 @@
       let worldHeight = 0;
       let pixelRatio = 1;
       let previousFrame = 0;
+      let fishVisibleLastFrame = true;
       let animationFrame = null;
-
-      sprite.width = 20;
-      sprite.height = 12;
+      let idleTimer = null;
 
       const isMobileViewport = () => window.innerWidth <= ANIMATION_SETTINGS.mobileBreakpoint;
       const randomBetween = (minimum, maximum) => minimum + Math.random() * (maximum - minimum);
@@ -1824,27 +1866,37 @@
         syncFishCount();
       };
 
+      const getFishSprite = (color, tailFrame, finFrame) => {
+        const key = `${color}:${tailFrame}:${finFrame}`;
+        if (spriteCache.has(key)) return spriteCache.get(key);
+
+        const fishSprite = document.createElement("canvas");
+        fishSprite.width = 20;
+        fishSprite.height = 12;
+        const fishContext = fishSprite.getContext("2d");
+        if (!fishContext) return fishSprite;
+        fishContext.fillStyle = color;
+        fishContext.fillRect(8, 2, 5, 1);
+        fishContext.fillRect(6, 3, 9, 1);
+        fishContext.fillRect(5, 4, 11, 4);
+        fishContext.fillRect(6, 8, 9, 1);
+        fishContext.fillRect(8, 9, 5, 1);
+        fishContext.fillRect(15, 5, 2, 2);
+        fishContext.fillRect(3, 4 + tailFrame, 3, 4);
+        fishContext.fillRect(1, 2 + tailFrame, 3, 3);
+        fishContext.fillRect(1, 7 + tailFrame, 3, 3);
+        fishContext.fillRect(9, 9 + finFrame, 3, 1);
+        spriteCache.set(key, fishSprite);
+        return fishSprite;
+      };
+
       const drawSprite = (fish) => {
         const screenY = fish.y - window.scrollY;
-        if (screenY < -fish.size || screenY > height + fish.size) return;
+        if (screenY < -fish.size || screenY > height + fish.size) return false;
 
         const tailFrame = Math.round(Math.sin(fish.phase) * 2);
         const finFrame = Math.sin(fish.phase * 0.5) > 0 ? 1 : 0;
-
-        spriteContext.clearRect(0, 0, sprite.width, sprite.height);
-        spriteContext.fillStyle = fish.color;
-
-        spriteContext.fillRect(8, 2, 5, 1);
-        spriteContext.fillRect(6, 3, 9, 1);
-        spriteContext.fillRect(5, 4, 11, 4);
-        spriteContext.fillRect(6, 8, 9, 1);
-        spriteContext.fillRect(8, 9, 5, 1);
-        spriteContext.fillRect(15, 5, 2, 2);
-
-        spriteContext.fillRect(3, 4 + tailFrame, 3, 4);
-        spriteContext.fillRect(1, 2 + tailFrame, 3, 3);
-        spriteContext.fillRect(1, 7 + tailFrame, 3, 3);
-        spriteContext.fillRect(9, 9 + finFrame, 3, 1);
+        const sprite = getFishSprite(fish.color, tailFrame, finFrame);
 
         context.save();
         context.translate(Math.round(fish.x), Math.round(screenY));
@@ -1858,6 +1910,7 @@
           fish.size * 0.6
         );
         context.restore();
+        return true;
       };
 
       const updateFish = (fish, delta, timestamp) => {
@@ -1939,29 +1992,43 @@
       };
 
       const animateFish = (timestamp) => {
-        const frameInterval = PORTFOLIO_RUNTIME.level === "lite"
-          ? 66
-          : isMobileViewport()
-          ? ANIMATION_SETTINGS.mobileFishFrameInterval
-          : ANIMATION_SETTINGS.fishFrameInterval;
+        animationFrame = null;
+        const canIdle = !fishVisibleLastFrame && !food.active && !shockwaves.length;
+        const frameInterval = canIdle
+          ? 180
+          : PORTFOLIO_RUNTIME.level === "lite"
+            ? 66
+            : isMobileViewport()
+              ? ANIMATION_SETTINGS.mobileFishFrameInterval
+              : ANIMATION_SETTINGS.fishFrameInterval;
 
         if (timestamp - previousFrame >= frameInterval) {
           const delta = previousFrame
-            ? Math.min(0.06, (timestamp - previousFrame) / 1000)
+            ? Math.min(canIdle ? 0.2 : 0.06, (timestamp - previousFrame) / 1000)
             : 0;
 
           previousFrame = timestamp;
-          context.clearRect(0, 0, width, height);
           while (
             shockwaves.length &&
             timestamp - shockwaves[0].start > ANIMATION_SETTINGS.rippleLifespan
           ) {
             shockwaves.shift();
           }
+
+          const fishMayBeVisible = fishes.some((fish) => {
+            const screenY = fish.y - window.scrollY;
+            return screenY >= -fish.size && screenY <= height + fish.size;
+          });
+          if (fishMayBeVisible || fishVisibleLastFrame) {
+            context.clearRect(0, 0, width, height);
+          }
+
+          let drewFish = false;
           fishes.forEach((fish) => {
             updateFish(fish, delta, timestamp);
-            drawSprite(fish);
+            drewFish = drawSprite(fish) || drewFish;
           });
+          fishVisibleLastFrame = drewFish;
 
           if (food.active && food.dropped) {
             const eater = fishes.find((fish) => (
@@ -1983,8 +2050,21 @@
           }
         }
 
-        animationFrame = requestAnimationFrame(animateFish);
+        const shouldSleep = !fishVisibleLastFrame && !food.active && !shockwaves.length;
+        if (shouldSleep) {
+          idleTimer = window.setTimeout(wakeFish, 160);
+        } else {
+          animationFrame = requestAnimationFrame(animateFish);
+        }
       };
+
+      function wakeFish() {
+        window.clearTimeout(idleTimer);
+        idleTimer = null;
+        if (!document.hidden && !animationFrame) {
+          animationFrame = requestAnimationFrame(animateFish);
+        }
+      }
 
       const updateFoodPosition = (detail, summon = false) => {
         food.active = true;
@@ -2016,16 +2096,20 @@
       };
 
       window.addEventListener("portfolio-shockwave", (event) => {
+        previousFrame = 0;
         shockwaves.push({
           id: performance.now() + Math.random(),
           x: event.detail.clientX,
           y: event.detail.clientY + window.scrollY,
           start: performance.now()
         });
+        wakeFish();
       });
 
       window.addEventListener("portfolio-food-start", (event) => {
+        previousFrame = 0;
         updateFoodPosition(event.detail, true);
+        wakeFish();
       });
 
       window.addEventListener("portfolio-food-move", (event) => {
@@ -2070,18 +2154,23 @@
       });
 
       document.addEventListener("visibilitychange", () => {
-        if (document.hidden && animationFrame) {
-          cancelAnimationFrame(animationFrame);
+        if (document.hidden) {
+          if (animationFrame) cancelAnimationFrame(animationFrame);
+          window.clearTimeout(idleTimer);
           animationFrame = null;
+          idleTimer = null;
           previousFrame = 0;
-        } else if (!document.hidden && !animationFrame) {
-          animationFrame = requestAnimationFrame(animateFish);
-        }
+        } else wakeFish();
       });
 
       window.addEventListener("resize", resizeCanvas);
+      window.addEventListener("scroll", () => {
+        fishVisibleLastFrame = true;
+        previousFrame = 0;
+        wakeFish();
+      }, { passive: true });
       resizeCanvas();
-      animationFrame = requestAnimationFrame(animateFish);
+      wakeFish();
     })();
 
     (() => {
@@ -2336,6 +2425,7 @@
       let columns = 0;
       let rows = 0;
       let ripples = [];
+      let previousRippleFrame = 0;
       let animationFrame = null;
 
       const maxRipples = PORTFOLIO_RUNTIME.level === "lite"
@@ -2347,6 +2437,20 @@
       // A ripple's energy is negligible beyond this distance from its wavefront,
       // so cells outside the band can be skipped without changing the render.
       const ringReach = ringWidth * 4;
+      const sineLookup = Float32Array.from(
+        { length: 256 },
+        (_, index) => Math.sin(index / 256 * Math.PI * 2)
+      );
+      const ringFalloff = Float32Array.from(
+        { length: 256 },
+        (_, index) => {
+          const normalizedDistance = index / 255 * 4;
+          return Math.exp(-(normalizedDistance * normalizedDistance) / 2);
+        }
+      );
+      const fastSin = (value) => (
+        sineLookup[(Math.floor(value * 40.743665) & 255)]
+      );
 
       function resizeRippleCanvas() {
         dpr = PORTFOLIO_RUNTIME.level === "lite"
@@ -2398,29 +2502,31 @@
       }
 
       function getCharacter(energy, x, y, now) {
-        const shimmer = Math.sin((x * 0.055) + (y * 0.035) + (now * 0.012));
+        const shimmer = fastSin((x * 0.055) + (y * 0.035) + (now * 0.012));
         const adjusted = Math.max(0, energy + shimmer * 0.08);
         const index = Math.min(chars.length - 1, Math.floor(adjusted * chars.length));
 
         return chars[index];
       }
 
-      function markColumns(active, row, xStart, xEnd) {
+      function markColumns(active, row, xStart, xEnd, rippleMask) {
         const colMin = Math.max(0, Math.floor(xStart / cellW));
         const colMax = Math.min(columns, Math.ceil(xEnd / cellW));
         const base = row * (columns + 1);
 
         for (let col = colMin; col <= colMax; col++) {
-          active.add(base + col);
+          const key = base + col;
+          active.set(key, (active.get(key) || 0) | rippleMask);
         }
       }
 
       // Flags every grid cell that sits within ringReach of an active wavefront.
       // Those are the only cells whose energy can cross the draw threshold.
       function activeCellKeys(now) {
-        const active = new Set();
+        const active = new Map();
 
-        for (const ripple of ripples) {
+        ripples.forEach((ripple, rippleIndex) => {
+          const rippleMask = 1 << rippleIndex;
           const radius = (now - ripple.start) * waveSpeed;
           const outer = radius + ringReach;
           const inner = radius - ringReach;
@@ -2439,18 +2545,24 @@
 
             if (innerSpan > 0) {
               const innerDx = Math.sqrt(innerSpan);
-              markColumns(active, row, ripple.x - outerDx, ripple.x - innerDx);
-              markColumns(active, row, ripple.x + innerDx, ripple.x + outerDx);
+              markColumns(active, row, ripple.x - outerDx, ripple.x - innerDx, rippleMask);
+              markColumns(active, row, ripple.x + innerDx, ripple.x + outerDx, rippleMask);
             } else {
-              markColumns(active, row, ripple.x - outerDx, ripple.x + outerDx);
+              markColumns(active, row, ripple.x - outerDx, ripple.x + outerDx, rippleMask);
             }
           }
-        }
+        });
 
         return active;
       }
 
       function drawRipples(now) {
+        const frameInterval = PORTFOLIO_RUNTIME.level === "lite" ? 66 : 33;
+        if (now - previousRippleFrame < frameInterval) {
+          animationFrame = requestAnimationFrame(drawRipples);
+          return;
+        }
+        previousRippleFrame = now;
         ctx.clearRect(0, 0, width, height);
 
         ripples = ripples.filter((ripple) => now - ripple.start < lifespan);
@@ -2463,38 +2575,50 @@
         ctx.font = `${fontSize}px "Comic Mono", "Comic Sans Mono", monospace`;
         const active = activeCellKeys(now);
 
-        for (let row = 0; row <= rows; row++) {
+        const rowStride = columns + 1;
+        for (const [key, rippleMask] of active) {
+          const row = Math.floor(key / rowStride);
+          const col = key - row * rowStride;
           const y = row * cellH;
           if (y + window.scrollY >= PORTFOLIO_SHORE_STATE.worldY) continue;
 
-          for (let col = 0; col <= columns; col++) {
-            if (!active.has(row * (columns + 1) + col)) continue;
+          const x = col * cellW;
+          let energy = 0;
+          let remainingRipples = rippleMask;
 
-            const x = col * cellW;
-            let energy = 0;
+          while (remainingRipples) {
+            const rippleBit = remainingRipples & -remainingRipples;
+            const rippleIndex = 31 - Math.clz32(rippleBit);
+            const ripple = ripples[rippleIndex];
+            const age = now - ripple.start;
+            const radius = age * waveSpeed;
+            const dx = x - ripple.x;
+            const dy = y - ripple.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const delta = Math.abs(distance - radius);
 
-            for (const ripple of ripples) {
-              const age = now - ripple.start;
-              const radius = age * waveSpeed;
-              const distance = Math.hypot(x - ripple.x, y - ripple.y);
-              const delta = Math.abs(distance - radius);
+            const falloffIndex = Math.min(
+              255,
+              Math.floor(delta / ringReach * 255)
+            );
+            const ring = ringFalloff[falloffIndex];
+            const fade = 1 - age / lifespan;
+            const interference = 0.78 + 0.22 * fastSin(
+              distance * 0.09 - age * 0.018 + ripple.seed
+            );
 
-              const ring = Math.exp(-(delta * delta) / (2 * ringWidth * ringWidth));
-              const fade = 1 - age / lifespan;
-              const interference = 0.78 + 0.22 * Math.sin(distance * 0.09 - age * 0.018 + ripple.seed);
+            energy += ring * fade * interference;
+            remainingRipples &= remainingRipples - 1;
+          }
 
-              energy += ring * fade * interference;
-            }
+          if (energy > 0.09) {
+            const saturatedEnergy = Math.min(1, energy);
+            const char = getCharacter(saturatedEnergy, x, y, now);
+            const colorPhase = Math.floor(x * 0.018 + y * 0.013 - now * 0.0025);
 
-            if (energy > 0.09) {
-              const saturatedEnergy = Math.min(1, energy);
-              const char = getCharacter(saturatedEnergy, x, y, now);
-              const colorPhase = Math.floor(x * 0.018 + y * 0.013 - now * 0.0025);
-
-              ctx.globalAlpha = Math.min(0.46, 0.08 + saturatedEnergy * 0.52);
-              ctx.fillStyle = rippleColors[Math.abs(colorPhase) % rippleColors.length];
-              ctx.fillText(char, x, y);
-            }
+            ctx.globalAlpha = Math.min(0.46, 0.08 + saturatedEnergy * 0.52);
+            ctx.fillStyle = rippleColors[Math.abs(colorPhase) % rippleColors.length];
+            ctx.fillText(char, x, y);
           }
         }
 
@@ -2581,48 +2705,10 @@
           [0, 7], [7, 5], [7, 6]
         ]
       };
-
-      function rotX(p, r) {
-        const x = p[0];
-        const y = p[1];
-        const z = p[2];
-        const c = Math.cos(r);
-        const s = Math.sin(r);
-
-        return [
-          x,
-          y * c - z * s,
-          y * s + z * c
-        ];
-      }
-
-      function rotY(p, r) {
-        const x = p[0];
-        const y = p[1];
-        const z = p[2];
-        const c = Math.cos(r);
-        const s = Math.sin(r);
-
-        return [
-          x * c + z * s,
-          y,
-          -x * s + z * c
-        ];
-      }
-
-      function rotZ(p, r) {
-        const x = p[0];
-        const y = p[1];
-        const z = p[2];
-        const c = Math.cos(r);
-        const s = Math.sin(r);
-
-        return [
-          x * c - y * s,
-          x * s + y * c,
-          z
-        ];
-      }
+      let canvasWidth = 0;
+      let canvasHeight = 0;
+      const pitchCos = Math.cos(-0.18);
+      const pitchSin = Math.sin(-0.18);
 
       function project(p, f, cx, cy) {
         const x = p[0];
@@ -2643,14 +2729,15 @@
 
         canvas.width = Math.floor(rect.width * dpr);
         canvas.height = Math.floor(rect.height * dpr);
+        canvasWidth = rect.width;
+        canvasHeight = rect.height;
 
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
 
       function drawShip(time) {
-        const rect = canvas.getBoundingClientRect();
-        const w = rect.width;
-        const h = rect.height;
+        const w = canvasWidth;
+        const h = canvasHeight;
 
         ctx.clearRect(0, 0, w, h);
 
@@ -2662,20 +2749,24 @@
         const zOffset = 238;
 
         const yaw = time * 1.08;
-        const pitch = -0.18;
-        const roll = Math.sin(time * 1.08) * 0.1;
+        const roll = Math.sin(yaw) * 0.1;
+        const yawCos = Math.cos(yaw);
+        const yawSin = Math.sin(yaw);
+        const rollCos = Math.cos(roll);
+        const rollSin = Math.sin(roll);
 
         const vertices3D = model.v.map((vertex) => {
-          let p = vertex.slice();
-
-          p = rotZ(p, roll);
-          p = rotX(p, pitch);
-          p = rotY(p, yaw);
+          const rolledX = vertex[0] * rollCos - vertex[1] * rollSin;
+          const rolledY = vertex[0] * rollSin + vertex[1] * rollCos;
+          const pitchedY = rolledY * pitchCos - vertex[2] * pitchSin;
+          const pitchedZ = rolledY * pitchSin + vertex[2] * pitchCos;
+          const rotatedX = rolledX * yawCos + pitchedZ * yawSin;
+          const rotatedZ = -rolledX * yawSin + pitchedZ * yawCos;
 
           return [
-            p[0] * scale,
-            p[1] * scale,
-            p[2] * scale + zOffset
+            rotatedX * scale,
+            pitchedY * scale,
+            rotatedZ * scale + zOffset
           ];
         });
 
