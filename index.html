@@ -300,12 +300,13 @@
 
     .hero {
       min-height: 100vh;
+      min-height: 100svh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 4rem;
-      padding: 8rem 1.5rem 4rem;
+      padding: 8rem 1.5rem 7rem;
     }
 
     .hero-about {
@@ -429,7 +430,7 @@
       grid-template-columns: repeat(10, minmax(0, 1fr));
       gap: 1rem;
       width: min(1200px, 100%);
-      margin: -9rem auto 4.5rem;
+      margin: -3rem auto 4.5rem;
     }
 
     .demo-showcase figure {
@@ -451,7 +452,7 @@
       grid-row: 2;
     }
 
-    .demo-showcase img {
+    .demo-media {
       display: block;
       width: 100%;
       aspect-ratio: 16 / 10;
@@ -467,7 +468,7 @@
       background: #f3f3f3;
     }
 
-    .gif-reveal-frame img {
+    .gif-reveal-frame .demo-media {
       width: 100%;
       height: 100%;
       aspect-ratio: auto;
@@ -521,13 +522,36 @@
       opacity: 1;
     }
 
-    .gif-hover-preview img {
+    .gif-hover-preview video {
       width: auto;
       height: auto;
       max-width: calc(100vw - 3rem);
       max-height: calc(100vh - 3rem);
       background: #ffffff;
       box-shadow: 0 18px 60px rgba(0, 0, 0, 0.24);
+    }
+
+    html.effects-failed .gif-reveal-canvas {
+      display: none !important;
+    }
+
+    html.effects-failed .gif-reveal-frame .demo-media {
+      opacity: 1 !important;
+    }
+
+    html.effects-failed .ascii-accessible-copy {
+      position: static;
+      width: auto;
+      height: auto;
+      margin: 0;
+      overflow: visible;
+      clip: auto;
+      clip-path: none;
+      white-space: inherit;
+    }
+
+    html.effects-failed .ascii-visual-copy {
+      display: none;
     }
 
     .contact-section {
@@ -600,6 +624,7 @@
 
       .hero {
         padding-top: 8rem;
+        padding-bottom: 6rem;
         gap: 2.75rem;
       }
 
@@ -625,7 +650,7 @@
       .demo-showcase {
         grid-template-columns: repeat(10, 110px);
         width: 100%;
-        margin: -6.5rem 0 3rem;
+        margin: -1.5rem 0 3rem;
         padding: 0 1.25rem 0.8rem;
         overflow-x: auto;
         scroll-snap-type: x proximity;
@@ -646,7 +671,7 @@
         display: none;
       }
 
-      .gif-reveal-frame img {
+      .gif-reveal-frame .demo-media {
         opacity: 1 !important;
       }
 
@@ -736,56 +761,56 @@
       <div class="demo-showcase" aria-label="Project demonstrations">
         <figure>
           <a class="demo-link" href="#experience">
-            <img src="./zones.gif" alt="Semantic navigation zones configured on a humanoid robot map" loading="eager" decoding="async">
+            <video class="demo-media" data-src="./media/zones.webm" data-mp4="./media/zones.mp4" poster="./media/zones.webp" muted loop playsinline preload="none" aria-label="Semantic navigation zones configured on a humanoid robot map"></video>
             <figcaption>Navigation zones @ Enchanted Tools</figcaption>
           </a>
         </figure>
 
         <figure>
           <a class="demo-link" href="#experience">
-            <img src="./reloc.gif" alt="Humanoid robot relocalized from a visual landmark" loading="eager" decoding="async">
+            <video class="demo-media" data-src="./media/reloc.webm" data-mp4="./media/reloc.mp4" poster="./media/reloc.webp" muted loop playsinline preload="none" aria-label="Humanoid robot relocalized from a visual landmark"></video>
             <figcaption>Visual-landmark relocalization @ Enchanted Tools</figcaption>
           </a>
         </figure>
 
         <figure>
           <a class="demo-link" href="#competitive-robotics">
-            <img src="./odomradar.gif" alt="Radar odometry running on a French Robotics Cup robot" loading="eager" decoding="async">
+            <video class="demo-media" data-src="./media/odomradar.webm" data-mp4="./media/odomradar.mp4" poster="./media/odomradar.webp" muted loop playsinline preload="none" aria-label="Radar odometry running on a French Robotics Cup robot"></video>
             <figcaption>Radar DVL-inspired odometry</figcaption>
           </a>
         </figure>
 
         <figure>
           <a class="demo-link" href="#competitive-robotics">
-            <img src="./fipatech.gif" alt="FIPATECH robot localization and navigation test for the French Robotics Cup" loading="eager" decoding="async">
+            <video class="demo-media" data-src="./media/fipatech.webm" data-mp4="./media/fipatech.mp4" poster="./media/fipatech.webp" muted loop playsinline preload="none" aria-label="FIPATECH robot localization and navigation test for the French Robotics Cup"></video>
             <figcaption>Localization and Navigation</figcaption>
           </a>
         </figure>
 
         <figure>
           <a class="demo-link" href="#project-fish">
-            <img src="./fishevit.gif" alt="Autonomous robotic fish performing obstacle avoidance in a pool" loading="eager" decoding="async">
+            <video class="demo-media" data-src="./media/fishevit.webm" data-mp4="./media/fishevit.mp4" poster="./media/fishevit.webp" muted loop playsinline preload="none" aria-label="Autonomous robotic fish performing obstacle avoidance in a pool"></video>
             <figcaption>Autonomous robot fish</figcaption>
           </a>
         </figure>
 
         <figure>
           <a class="demo-link" href="#project-bluerov">
-            <img src="./Suivifurtif.gif" alt="Underwater target recognition for autonomous stealth tracking" loading="lazy" decoding="async">
+            <video class="demo-media" data-src="./media/Suivifurtif.webm" data-mp4="./media/Suivifurtif.mp4" poster="./media/Suivifurtif.webp" muted loop playsinline preload="none" aria-label="Underwater target recognition for autonomous stealth tracking"></video>
             <figcaption>Target recognition for stealth tracking</figcaption>
           </a>
         </figure>
 
         <figure>
           <a class="demo-link" href="#competitive-robotics">
-            <img src="./brasdugardien.gif" alt="RoboCup goalkeeper robot operating its interception arm" loading="lazy" decoding="async">
+            <video class="demo-media" data-src="./media/brasdugardien.webm" data-mp4="./media/brasdugardien.mp4" poster="./media/brasdugardien.webp" muted loop playsinline preload="none" aria-label="RoboCup goalkeeper robot operating its interception arm"></video>
             <figcaption>RoboCup Goalkeeper interception arm</figcaption>
           </a>
         </figure>
       </div>
 
       <div class="gif-hover-preview" id="gifHoverPreview" aria-hidden="true">
-        <img id="gifHoverPreviewImage" alt="">
+        <video id="gifHoverPreviewVideo" muted loop playsinline preload="none"></video>
       </div>
 
       <div class="content">
@@ -1014,6 +1039,91 @@
       worldY: Infinity
     };
 
+    const PORTFOLIO_RUNTIME = (() => {
+      const reducedMotion = Boolean(
+        window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      );
+      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const constrainedNetwork = Boolean(
+        connection && (connection.saveData || /(^|-)2g$/.test(connection.effectiveType || ""))
+      );
+      const constrainedDevice = Boolean(
+        (navigator.deviceMemory && navigator.deviceMemory <= 4) ||
+        (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4)
+      );
+      const compactViewport = window.innerWidth <= ANIMATION_SETTINGS.mobileBreakpoint;
+
+      return Object.freeze({
+        reducedMotion,
+        constrainedNetwork,
+        level: reducedMotion || constrainedNetwork
+          ? "static"
+          : compactViewport || constrainedDevice
+            ? "lite"
+            : "full"
+      });
+    })();
+
+    const failOpen = () => document.documentElement.classList.add("effects-failed");
+    window.addEventListener("error", failOpen);
+    window.addEventListener("unhandledrejection", failOpen);
+
+    (() => {
+      const videos = [...document.querySelectorAll("video.demo-media[data-src]")];
+      if (!videos.length) return;
+      if (PORTFOLIO_RUNTIME.reducedMotion) return;
+
+      const loadVideo = (video) => {
+        if (!video.src) {
+          const supportsWebm = Boolean(
+            video.canPlayType && video.canPlayType('video/webm; codecs="vp9"')
+          );
+          video.src = supportsWebm ? video.dataset.src : video.dataset.mp4;
+          video.load();
+        }
+        if (!PORTFOLIO_RUNTIME.reducedMotion) {
+          const playback = video.play();
+          if (playback && typeof playback.catch === "function") playback.catch(() => {});
+        }
+      };
+
+      const pauseVideo = (video) => {
+        if (!video.paused) video.pause();
+      };
+
+      if (PORTFOLIO_RUNTIME.constrainedNetwork) {
+        videos.forEach((video) => {
+          video.addEventListener("pointerenter", () => loadVideo(video), { once: true });
+          video.closest("a")?.addEventListener("focus", () => loadVideo(video), { once: true });
+        });
+        return;
+      }
+
+      if (!("IntersectionObserver" in window)) return;
+
+      const visibleVideos = new Set();
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          const video = entry.target;
+          if (entry.isIntersecting) {
+            visibleVideos.add(video);
+            loadVideo(video);
+          } else {
+            visibleVideos.delete(video);
+            pauseVideo(video);
+          }
+        });
+      }, { rootMargin: "240px 0px", threshold: 0.01 });
+
+      videos.forEach((video) => observer.observe(video));
+      document.addEventListener("visibilitychange", () => {
+        visibleVideos.forEach((video) => {
+          if (document.hidden) pauseVideo(video);
+          else loadVideo(video);
+        });
+      });
+    })();
+
     (() => {
       const blockClipboard = (event) => event.preventDefault();
 
@@ -1024,9 +1134,7 @@
     })();
 
     (() => {
-      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-      if (reduceMotion) return;
+      if (PORTFOLIO_RUNTIME.level !== "full") return;
 
       const imageTargets = [...document.querySelectorAll(".demo-showcase figure")];
       const textTargets = [...document.querySelectorAll(
@@ -1049,27 +1157,28 @@
       };
 
       const prepareImageTarget = (figure, targetIndex) => {
-        const image = figure.querySelector("img");
-        if (!image) return null;
+        const media = figure.querySelector(".demo-media");
+        if (!media) return null;
 
         const frame = document.createElement("div");
         const canvas = document.createElement("canvas");
         const context = canvas.getContext("2d");
+        if (!context) return null;
 
         frame.className = "gif-reveal-frame";
         canvas.className = "gif-reveal-canvas";
         canvas.setAttribute("aria-hidden", "true");
-        image.before(frame);
-        frame.append(image, canvas);
-        image.style.opacity = "0";
+        media.before(frame);
+        frame.append(media, canvas);
 
         return {
           figure,
           frame,
-          image,
+          media,
           canvas,
           context,
           progress: 0,
+          renderedProgress: -1,
           triggered: false,
           targetIndex
         };
@@ -1078,14 +1187,12 @@
       const imageAnimations = imageTargets.map(prepareImageTarget).filter(Boolean);
 
       const renderImageTiles = (animation) => {
-        const { frame, image, canvas, context, progress, targetIndex } = animation;
+        const { frame, media, canvas, context, progress, targetIndex } = animation;
         if (!context) return;
+        animation.renderedProgress = progress;
 
         const rect = frame.getBoundingClientRect();
-        const maxPixelRatio = isMobileViewport()
-          ? ANIMATION_SETTINGS.mobileCanvasPixelRatio
-          : ANIMATION_SETTINGS.maxCanvasPixelRatio;
-        const pixelRatio = Math.max(1, Math.min(maxPixelRatio, window.devicePixelRatio || 1));
+        const pixelRatio = 1;
         const width = Math.max(1, Math.round(rect.width));
         const height = Math.max(1, Math.round(rect.height));
         const requiredWidth = Math.round(width * pixelRatio);
@@ -1100,15 +1207,12 @@
         context.clearRect(0, 0, width, height);
 
         if (progress >= 0.999) {
-          image.style.opacity = "1";
           canvas.style.opacity = "0";
           return;
         }
 
-        image.style.opacity = "0";
+        media.style.opacity = "1";
         canvas.style.opacity = "1";
-
-        if (!image.complete || !image.naturalWidth || progress <= 0) return;
 
         const columns = isMobileViewport()
           ? ANIMATION_SETTINGS.mobileGifColumns
@@ -1119,11 +1223,6 @@
         const rows = Math.max(minimumRows, Math.round(columns * height / width));
         const tileWidth = width / columns;
         const tileHeight = height / rows;
-        const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
-        const sourceWidth = width / scale;
-        const sourceHeight = height / scale;
-        const sourceX = (image.naturalWidth - sourceWidth) / 2;
-        const sourceY = (image.naturalHeight - sourceHeight) / 2;
 
         context.imageSmoothingEnabled = false;
         context.textAlign = "center";
@@ -1138,26 +1237,20 @@
             const threshold = verticalOrder * 0.62 + jitter;
             const localProgress = smoothstep((progress - threshold) / 0.2);
 
-            if (localProgress <= 0) continue;
-
             const dx = column * tileWidth;
             const dy = row * tileHeight;
             const dw = Math.ceil(tileWidth + 0.5);
             const dh = Math.ceil(tileHeight + 0.5);
-            const sx = sourceX + column / columns * sourceWidth;
-            const sy = sourceY + row / rows * sourceHeight;
-            const sw = sourceWidth / columns;
-            const sh = sourceHeight / rows;
 
-            context.globalAlpha = localProgress;
-            context.drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh);
-
-            if (localProgress < 0.88) {
-              const asciiOpacity = 1 - localProgress / 0.88;
-              context.globalAlpha = asciiOpacity * 0.78;
+            if (localProgress < 1) {
+              const coverOpacity = 1 - localProgress;
+              context.globalAlpha = Math.min(1, coverOpacity * 1.35);
+              context.fillStyle = "#ffffff";
+              context.fillRect(dx, dy, dw, dh);
+              context.globalAlpha = coverOpacity * 0.78;
               context.fillStyle = colors[Math.abs(seed) % colors.length];
               context.fillRect(dx, dy, dw, dh);
-              context.globalAlpha = asciiOpacity;
+              context.globalAlpha = coverOpacity;
               context.fillStyle = "#ffffff";
               context.fillText(
                 characters[Math.abs(seed * 7) % characters.length],
@@ -1232,7 +1325,27 @@
         return animations;
       };
 
-      const textAnimations = textTargets.flatMap(prepareTextTarget);
+      const textAnimations = [];
+      const prepareVisibleText = (target, index) => {
+        textAnimations.push(...prepareTextTarget(target, index));
+        requestRevealUpdate();
+      };
+
+      if ("IntersectionObserver" in window) {
+        const textObserver = new IntersectionObserver((entries, observer) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const index = textTargets.indexOf(entry.target);
+            prepareVisibleText(entry.target, index);
+            observer.unobserve(entry.target);
+          });
+        }, { rootMargin: "320px 0px", threshold: 0 });
+        textTargets.forEach((target) => textObserver.observe(target));
+      } else {
+        textTargets.forEach((target, index) => {
+          textAnimations.push(...prepareTextTarget(target, index));
+        });
+      }
 
       const updateTextTarget = (animation, progress) => {
         if (animation.renderedProgress === progress) return;
@@ -1315,7 +1428,12 @@
           : ANIMATION_SETTINGS.gifFrameInterval;
 
         if (timestamp - previousGifRender >= gifFrameInterval || !hasActiveGif) {
-          imageAnimations.forEach(renderImageTiles);
+          imageAnimations.forEach((animation) => {
+            if (
+              animation.triggered &&
+              animation.renderedProgress !== animation.progress
+            ) renderImageTiles(animation);
+          });
           previousGifRender = timestamp;
         }
 
@@ -1331,10 +1449,6 @@
           revealAnimationFrame = requestAnimationFrame(renderActiveReveals);
         }
       };
-
-      imageAnimations.forEach(({ image }) => {
-        image.addEventListener("load", requestRevealRender, { once: true });
-      });
 
       window.addEventListener("portfolio-shore-wave", (event) => {
         if (event.detail.direction !== "down") return;
@@ -1429,13 +1543,16 @@
 
       window.addEventListener("scroll", requestRevealUpdate, { passive: true });
       window.addEventListener("resize", () => {
+        imageAnimations.forEach((animation) => {
+          animation.renderedProgress = -1;
+        });
         requestRevealUpdate();
       });
       requestRevealUpdate();
     })();
 
     (() => {
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      if (PORTFOLIO_RUNTIME.level === "static") return;
 
       const section = document.querySelector(".contact-section");
       const canvas = document.getElementById("shoreWaveCanvas");
@@ -1464,7 +1581,13 @@
         height = Math.max(1, Math.round(rect.height));
         pixelRatio = Math.max(
           1,
-          Math.min(window.innerWidth <= ANIMATION_SETTINGS.mobileBreakpoint ? 1 : 1.5, window.devicePixelRatio || 1)
+          Math.min(
+            PORTFOLIO_RUNTIME.level === "lite" ||
+              window.innerWidth <= ANIMATION_SETTINGS.mobileBreakpoint
+              ? 1
+              : 1.5,
+            window.devicePixelRatio || 1
+          )
         );
         canvas.width = Math.round(width * pixelRatio);
         canvas.height = Math.round(height * pixelRatio);
@@ -1605,7 +1728,7 @@
     })();
 
     (() => {
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      if (PORTFOLIO_RUNTIME.level === "static") return;
 
       const canvas = document.getElementById("pixelFishCanvas");
       const context = canvas ? canvas.getContext("2d") : null;
@@ -1689,7 +1812,9 @@
         width = window.innerWidth;
         height = window.innerHeight;
         worldHeight = Math.max(height, document.documentElement.scrollHeight);
-        pixelRatio = Math.max(1, Math.min(isMobileViewport() ? 1 : 2, window.devicePixelRatio || 1));
+        pixelRatio = PORTFOLIO_RUNTIME.level === "lite"
+          ? 1
+          : Math.max(1, Math.min(1.5, window.devicePixelRatio || 1));
         canvas.width = Math.round(width * pixelRatio);
         canvas.height = Math.round(height * pixelRatio);
         canvas.style.width = `${width}px`;
@@ -1814,7 +1939,9 @@
       };
 
       const animateFish = (timestamp) => {
-        const frameInterval = isMobileViewport()
+        const frameInterval = PORTFOLIO_RUNTIME.level === "lite"
+          ? 66
+          : isMobileViewport()
           ? ANIMATION_SETTINGS.mobileFishFrameInterval
           : ANIMATION_SETTINGS.fishFrameInterval;
 
@@ -2152,25 +2279,38 @@
 
     (() => {
       if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+      if (PORTFOLIO_RUNTIME.reducedMotion) return;
 
       const preview = document.getElementById("gifHoverPreview");
-      const previewImage = document.getElementById("gifHoverPreviewImage");
-      const thumbnails = document.querySelectorAll(".demo-showcase img");
+      const previewVideo = document.getElementById("gifHoverPreviewVideo");
+      const thumbnails = document.querySelectorAll(".demo-showcase .demo-media");
 
-      if (!preview || !previewImage || !thumbnails.length) return;
+      if (!preview || !previewVideo || !thumbnails.length) return;
 
       const hidePreview = () => {
         preview.classList.remove("is-visible");
+        previewVideo.pause();
       };
 
       thumbnails.forEach((thumbnail) => {
         thumbnail.addEventListener("mouseenter", () => {
-          previewImage.src = thumbnail.currentSrc || thumbnail.src;
-          previewImage.alt = thumbnail.alt;
+          const source = thumbnail.currentSrc || thumbnail.src || thumbnail.dataset.src;
+          if (!source) return;
+          if (previewVideo.src !== new URL(source, document.baseURI).href) {
+            previewVideo.src = source;
+            previewVideo.poster = thumbnail.poster;
+          }
+          const playback = previewVideo.play();
+          if (playback && typeof playback.catch === "function") playback.catch(() => {});
+          thumbnail.pause();
           preview.classList.add("is-visible");
         });
 
-        thumbnail.addEventListener("mouseleave", hidePreview);
+        thumbnail.addEventListener("mouseleave", () => {
+          hidePreview();
+          const playback = thumbnail.play();
+          if (playback && typeof playback.catch === "function") playback.catch(() => {});
+        });
       });
 
       window.addEventListener("blur", hidePreview);
@@ -2179,6 +2319,7 @@
 
     (() => {
       const canvas = document.getElementById("asciiRippleCanvas");
+      if (!canvas || PORTFOLIO_RUNTIME.level === "static") return;
       const ctx = canvas.getContext("2d");
 
       if (!ctx) return;
@@ -2197,7 +2338,9 @@
       let ripples = [];
       let animationFrame = null;
 
-      const maxRipples = ANIMATION_SETTINGS.rippleLimit;
+      const maxRipples = PORTFOLIO_RUNTIME.level === "lite"
+        ? 4
+        : ANIMATION_SETTINGS.rippleLimit;
       const lifespan = ANIMATION_SETTINGS.rippleLifespan;
       const waveSpeed = ANIMATION_SETTINGS.rippleWaveSpeed;
       const ringWidth = ANIMATION_SETTINGS.rippleRingWidth;
@@ -2206,7 +2349,9 @@
       const ringReach = ringWidth * 4;
 
       function resizeRippleCanvas() {
-        dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        dpr = PORTFOLIO_RUNTIME.level === "lite"
+          ? 1
+          : Math.max(1, Math.min(1.5, window.devicePixelRatio || 1));
         width = window.innerWidth;
         height = window.innerHeight;
 
@@ -2390,17 +2535,29 @@
       asciiLeft.style.color = colors[0];
       asciiRight.style.color = colors[2];
 
-      setInterval(() => {
+      let indexTimer = null;
+      const animateIndex = () => {
         index = (index + 1) % frames.length;
         asciiLeft.textContent = frames[index][0];
         asciiRight.textContent = frames[index][1];
         asciiLeft.style.color = colors[index % colors.length];
         asciiRight.style.color = colors[(index + 2) % colors.length];
-      }, ANIMATION_SETTINGS.indexWaveInterval);
+        indexTimer = window.setTimeout(animateIndex, ANIMATION_SETTINGS.indexWaveInterval);
+      };
+
+      const syncIndexAnimation = () => {
+        window.clearTimeout(indexTimer);
+        indexTimer = null;
+        if (!document.hidden && PORTFOLIO_RUNTIME.level !== "static") animateIndex();
+      };
+
+      document.addEventListener("visibilitychange", syncIndexAnimation);
+      syncIndexAnimation();
     })();
 
     (() => {
       const canvas = document.getElementById("oldShipCanvas");
+      if (!canvas || PORTFOLIO_RUNTIME.level === "static") return;
       const ctx = canvas.getContext("2d");
 
       if (!ctx) return;
@@ -2480,7 +2637,9 @@
 
       function resizeCanvas() {
         const rect = canvas.getBoundingClientRect();
-        const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        const dpr = PORTFOLIO_RUNTIME.level === "lite"
+          ? 1
+          : Math.max(1, Math.min(1.5, window.devicePixelRatio || 1));
 
         canvas.width = Math.floor(rect.width * dpr);
         canvas.height = Math.floor(rect.height * dpr);
@@ -2547,14 +2706,39 @@
         ctx.restore();
       }
 
+      let shipFrame = null;
+      let shipVisible = true;
+      let previousShipFrame = 0;
+
       function frame(now) {
-        drawShip(now * 0.001);
-        requestAnimationFrame(frame);
+        if (!shipVisible || document.hidden) {
+          shipFrame = null;
+          return;
+        }
+        const minimumFrameTime = PORTFOLIO_RUNTIME.level === "lite" ? 80 : 34;
+        if (now - previousShipFrame >= minimumFrameTime) {
+          previousShipFrame = now;
+          drawShip(now * 0.001);
+        }
+        shipFrame = requestAnimationFrame(frame);
       }
+
+      const syncShip = () => {
+        if (shipVisible && !document.hidden && !shipFrame) {
+          shipFrame = requestAnimationFrame(frame);
+        }
+      };
 
       resizeCanvas();
       window.addEventListener("resize", resizeCanvas);
-      requestAnimationFrame(frame);
+      document.addEventListener("visibilitychange", syncShip);
+      if ("IntersectionObserver" in window) {
+        new IntersectionObserver((entries) => {
+          shipVisible = entries.some((entry) => entry.isIntersecting);
+          syncShip();
+        }).observe(canvas);
+      }
+      syncShip();
     })();
   </script>
 </body>
