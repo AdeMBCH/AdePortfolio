@@ -100,6 +100,35 @@
       pointer-events: none;
     }
 
+    .ascii-accessible-copy {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .ascii-visual-copy {
+      display: inline;
+    }
+
+    .ascii-glyph {
+      display: inline;
+    }
+
+    .ascii-glyph.is-pending {
+      color: transparent;
+    }
+
+    .ascii-glyph.is-scrambling {
+      color: var(--ascii-color);
+    }
+
     main,
     .contact-section {
       position: relative;
@@ -195,13 +224,21 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 1.5rem;
-      padding: 7rem 1.5rem 2rem;
+      gap: 4rem;
+      padding: 8rem 1.5rem 4rem;
     }
 
-    .hero > .section {
-      width: min(980px, 100%);
-      padding: 0;
+    .hero-about {
+      width: min(760px, 100%);
+      text-align: left;
+    }
+
+    .hero-about p {
+      margin: 0 0 0.55rem;
+    }
+
+    .hero-about p:last-child {
+      margin-bottom: 0;
     }
 
     .toc {
@@ -249,9 +286,10 @@
     .toc-title .ascii-frame {
       display: inline-block;
       min-width: 3.2ch;
-      color: var(--muted);
+      color: #0891b2;
       font-weight: 400;
       white-space: pre;
+      transition: color 320ms ease;
     }
 
     .toc a {
@@ -311,7 +349,7 @@
       grid-template-columns: repeat(10, minmax(0, 1fr));
       gap: 1rem;
       width: min(1200px, 100%);
-      margin: 0;
+      margin: -9rem auto 4.5rem;
     }
 
     .demo-showcase figure {
@@ -323,12 +361,12 @@
       grid-row: 1;
     }
 
-    .demo-showcase .demo-showcase-featured {
+    .demo-showcase figure:nth-child(6) {
       grid-column: 4 / span 2;
       grid-row: 2;
     }
 
-    .demo-showcase .demo-showcase-keeper {
+    .demo-showcase figure:nth-child(7) {
       grid-column: 6 / span 2;
       grid-row: 2;
     }
@@ -339,6 +377,29 @@
       aspect-ratio: 16 / 10;
       object-fit: cover;
       background: #f3f3f3;
+    }
+
+    .gif-reveal-frame {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      overflow: hidden;
+      background: #f3f3f3;
+    }
+
+    .gif-reveal-frame img {
+      width: 100%;
+      height: 100%;
+      aspect-ratio: auto;
+    }
+
+    .gif-reveal-canvas {
+      position: absolute;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
     }
 
     .demo-showcase figcaption {
@@ -428,8 +489,8 @@
       }
 
       .hero {
-        padding-top: 9rem;
-        gap: 1.5rem;
+        padding-top: 8rem;
+        gap: 2.75rem;
       }
 
       .toc {
@@ -453,16 +514,30 @@
 
       .demo-showcase {
         grid-template-columns: repeat(10, 110px);
-        width: calc(100% + 2.5rem);
-        margin-inline: -1.25rem;
+        width: 100%;
+        margin: -6.5rem 0 3rem;
         padding: 0 1.25rem 0.8rem;
-        gap: 0.8rem;
         overflow-x: auto;
         scroll-snap-type: x proximity;
       }
 
       .demo-showcase figure {
         scroll-snap-align: start;
+      }
+
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      .gif-reveal-canvas {
+        display: none;
+      }
+
+      .gif-reveal-frame img {
+        opacity: 1 !important;
       }
     }
   </style>
@@ -527,22 +602,19 @@
           </ul>
         </nav>
 
-        <section class="section" id="about" aria-labelledby="about-title">
-          <h2 class="section-title" id="about-title">about</h2>
+        <div class="hero-about" id="about">
+          <p>
+            <strong>I build autonomous robotic systems for complex environments.</strong>
+            I am an engineering student in autonomous robotics and mechatronic systems at ENSTA - IP Paris and SeaTech Toulon, working on navigation, perception, control, and integration for mobile, underwater, and biomimetic robots.
+          </p>
 
-          <div class="section-body">
-            <p>
-              <strong>I build autonomous robotic systems for complex environments.</strong>
-              I am an engineering student in autonomous robotics and mechatronic systems at ENSTA - IP Paris and SeaTech Toulon, working on navigation, perception, control, and integration for mobile, underwater, and biomimetic robots.
-            </p>
+          <p>
+            I am looking for a six-month final-year internship starting in March 2027.
+          </p>
+        </div>
+      </section>
 
-            <p>
-              I am looking for a six-month final-year internship starting in March 2027.
-            </p>
-          </div>
-        </section>
-
-        <div class="demo-showcase" aria-label="Project demonstrations">
+      <div class="demo-showcase" aria-label="Project demonstrations">
         <figure>
           <img src="./zones.gif" alt="Semantic navigation zones configured on a humanoid robot map" loading="lazy" decoding="async">
           <figcaption>Navigation zones @ Enchanted Tools</figcaption>
@@ -568,17 +640,16 @@
           <figcaption>Autonomous robot fish</figcaption>
         </figure>
 
-        <figure class="demo-showcase-featured">
+        <figure>
           <img src="./Suivifurtif.gif" alt="Underwater target recognition for autonomous stealth tracking" loading="lazy" decoding="async">
           <figcaption>Target recognition for stealth tracking</figcaption>
         </figure>
 
-        <figure class="demo-showcase-keeper">
+        <figure>
           <img src="./brasdugardien.gif" alt="RoboCup goalkeeper robot operating its interception arm" loading="lazy" decoding="async">
           <figcaption>RoboCup Goalkeeper interception arm</figcaption>
         </figure>
-        </div>
-      </section>
+      </div>
 
       <div class="gif-hover-preview" id="gifHoverPreview" aria-hidden="true">
         <img id="gifHoverPreviewImage" alt="">
@@ -752,6 +823,352 @@
 
   <script>
     (() => {
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      if (reduceMotion) return;
+
+      const imageTargets = [...document.querySelectorAll(".demo-showcase figure")];
+      const textTargets = [...document.querySelectorAll(
+        ".demo-showcase figcaption, .section, .contact-section > *"
+      )];
+      const characters = [
+        "░", "▒", "▓", ".", ":", "~", "-", "=", "+", "*", "#", "@",
+        "%", "&", "0", "/", "\\", "<", ">", "[", "]", "{", "}"
+      ];
+      const colors = ["#2563eb", "#0891b2", "#06a6a6", "#10b981", "#38bdf8"];
+      let revealAnimationFrame = null;
+      let previousRevealTime = 0;
+      let previousGifRender = 0;
+      let ticking = false;
+
+      const clamp = (value, minimum = 0, maximum = 1) => (
+        Math.min(maximum, Math.max(minimum, value))
+      );
+
+      const smoothstep = (value) => {
+        const progress = clamp(value);
+        return progress * progress * (3 - 2 * progress);
+      };
+
+      const prepareImageTarget = (figure, targetIndex) => {
+        const image = figure.querySelector("img");
+        if (!image) return null;
+
+        const frame = document.createElement("div");
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+
+        frame.className = "gif-reveal-frame";
+        canvas.className = "gif-reveal-canvas";
+        canvas.setAttribute("aria-hidden", "true");
+        image.before(frame);
+        frame.append(image, canvas);
+        image.style.opacity = "0";
+
+        return {
+          figure,
+          frame,
+          image,
+          canvas,
+          context,
+          progress: 0,
+          triggered: false,
+          targetIndex
+        };
+      };
+
+      const imageAnimations = imageTargets.map(prepareImageTarget).filter(Boolean);
+
+      const renderImageTiles = (animation) => {
+        const { frame, image, canvas, context, progress, targetIndex } = animation;
+        if (!context) return;
+
+        const rect = frame.getBoundingClientRect();
+        const pixelRatio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        const width = Math.max(1, Math.round(rect.width));
+        const height = Math.max(1, Math.round(rect.height));
+        const requiredWidth = Math.round(width * pixelRatio);
+        const requiredHeight = Math.round(height * pixelRatio);
+
+        if (canvas.width !== requiredWidth || canvas.height !== requiredHeight) {
+          canvas.width = requiredWidth;
+          canvas.height = requiredHeight;
+          context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        }
+
+        context.clearRect(0, 0, width, height);
+
+        if (progress >= 0.999) {
+          image.style.opacity = "1";
+          canvas.style.opacity = "0";
+          return;
+        }
+
+        image.style.opacity = "0";
+        canvas.style.opacity = "1";
+
+        if (!image.complete || !image.naturalWidth || progress <= 0) return;
+
+        const columns = width < 180 ? 10 : 14;
+        const rows = Math.max(6, Math.round(columns * height / width));
+        const tileWidth = width / columns;
+        const tileHeight = height / rows;
+        const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+        const sourceWidth = width / scale;
+        const sourceHeight = height / scale;
+        const sourceX = (image.naturalWidth - sourceWidth) / 2;
+        const sourceY = (image.naturalHeight - sourceHeight) / 2;
+
+        context.imageSmoothingEnabled = false;
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.font = `${Math.max(10, Math.min(15, tileHeight * 0.65))}px "Comic Mono", monospace`;
+
+        for (let row = 0; row < rows; row += 1) {
+          for (let column = 0; column < columns; column += 1) {
+            const seed = targetIndex * 101 + row * 29 + column * 17;
+            const verticalOrder = rows > 1 ? row / (rows - 1) : 0;
+            const jitter = ((seed % 23) / 23) * 0.22;
+            const threshold = verticalOrder * 0.62 + jitter;
+            const localProgress = smoothstep((progress - threshold) / 0.2);
+
+            if (localProgress <= 0) continue;
+
+            const dx = column * tileWidth;
+            const dy = row * tileHeight;
+            const dw = Math.ceil(tileWidth + 0.5);
+            const dh = Math.ceil(tileHeight + 0.5);
+            const sx = sourceX + column / columns * sourceWidth;
+            const sy = sourceY + row / rows * sourceHeight;
+            const sw = sourceWidth / columns;
+            const sh = sourceHeight / rows;
+
+            context.globalAlpha = localProgress;
+            context.drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh);
+
+            if (localProgress < 0.88) {
+              const asciiOpacity = 1 - localProgress / 0.88;
+              context.globalAlpha = asciiOpacity * 0.78;
+              context.fillStyle = colors[Math.abs(seed) % colors.length];
+              context.fillRect(dx, dy, dw, dh);
+              context.globalAlpha = asciiOpacity;
+              context.fillStyle = "#ffffff";
+              context.fillText(
+                characters[Math.abs(seed * 7) % characters.length],
+                dx + tileWidth / 2,
+                dy + tileHeight / 2
+              );
+            }
+          }
+        }
+
+        context.globalAlpha = 1;
+      };
+
+      const prepareTextTarget = (target, targetIndex) => {
+        const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, {
+          acceptNode: (node) => (
+            node.nodeValue.trim()
+              ? NodeFilter.FILTER_ACCEPT
+              : NodeFilter.FILTER_REJECT
+          )
+        });
+        const textNodes = [];
+        const animations = [];
+
+        while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+        textNodes.forEach((textNode, textNodeIndex) => {
+          const originalText = textNode.nodeValue;
+          const fragment = document.createDocumentFragment();
+          const accessibleCopy = document.createElement("span");
+          const visualCopy = document.createElement("span");
+          const glyphs = [];
+
+          accessibleCopy.className = "ascii-accessible-copy";
+          accessibleCopy.textContent = originalText;
+          visualCopy.className = "ascii-visual-copy";
+          visualCopy.setAttribute("aria-hidden", "true");
+
+          [...originalText].forEach((character) => {
+            if (/\s/.test(character)) {
+              visualCopy.appendChild(document.createTextNode(character));
+              return;
+            }
+
+            const glyph = document.createElement("span");
+            glyph.className = "ascii-glyph is-pending";
+            glyph.textContent = character;
+            glyph.dataset.character = character;
+            glyph.dataset.seed = targetIndex * 97 + textNodeIndex * 41 + glyphs.length * 17;
+            glyphs.push(glyph);
+            visualCopy.appendChild(glyph);
+          });
+
+          fragment.append(accessibleCopy, visualCopy);
+          textNode.replaceWith(fragment);
+
+          glyphs.forEach((glyph, index) => {
+            const readingOrder = glyphs.length > 1 ? index / (glyphs.length - 1) : 0;
+            const jitter = ((Number(glyph.dataset.seed) % 19) / 19) * 0.18;
+            glyph.dataset.threshold = Math.min(0.82, readingOrder * 0.58 + jitter).toFixed(3);
+          });
+
+          animations.push({
+            target: visualCopy,
+            glyphs,
+            progress: 0,
+            renderedProgress: -1,
+            triggered: false
+          });
+        });
+
+        return animations;
+      };
+
+      const textAnimations = textTargets.flatMap(prepareTextTarget);
+
+      const updateTextTarget = (animation, progress) => {
+        if (animation.renderedProgress === progress) return;
+        animation.renderedProgress = progress;
+
+        const { glyphs } = animation;
+        const scrambleWidth = 0.2;
+        const phase = Math.floor(progress * 72);
+
+        glyphs.forEach((glyph) => {
+          const threshold = Number(glyph.dataset.threshold);
+          const localProgress = (progress - threshold) / scrambleWidth;
+
+          if (localProgress <= 0) {
+            glyph.className = "ascii-glyph is-pending";
+            glyph.textContent = glyph.dataset.character;
+            return;
+          }
+
+          if (localProgress < 1) {
+            const seed = Number(glyph.dataset.seed) + phase;
+            glyph.className = "ascii-glyph is-scrambling";
+            glyph.style.setProperty("--ascii-color", colors[Math.abs(seed) % colors.length]);
+            glyph.textContent = characters[Math.abs(seed * 7 + phase * 5) % characters.length];
+            return;
+          }
+
+          glyph.className = "ascii-glyph";
+          glyph.style.removeProperty("--ascii-color");
+          glyph.textContent = glyph.dataset.character;
+        });
+      };
+
+      const renderActiveReveals = (timestamp) => {
+        const delta = previousRevealTime
+          ? Math.min(50, timestamp - previousRevealTime)
+          : 0;
+        let hasActiveReveal = false;
+        let hasActiveGif = false;
+
+        previousRevealTime = timestamp;
+
+        imageAnimations.forEach((animation) => {
+          if (!animation.triggered) return;
+
+          if (animation.progress < 1) {
+            animation.progress = Math.min(1, animation.progress + delta / 4000);
+            hasActiveReveal = animation.progress < 1 || hasActiveReveal;
+            hasActiveGif = animation.progress < 1 || hasActiveGif;
+          }
+        });
+
+        textAnimations.forEach((animation) => {
+          if (!animation.triggered) return;
+
+          if (animation.progress < 1) {
+            animation.progress = Math.min(1, animation.progress + delta / 3200);
+            hasActiveReveal = animation.progress < 1 || hasActiveReveal;
+          }
+
+          updateTextTarget(animation, animation.progress);
+        });
+
+        if (timestamp - previousGifRender >= 40 || !hasActiveGif) {
+          imageAnimations.forEach(renderImageTiles);
+          previousGifRender = timestamp;
+        }
+
+        revealAnimationFrame = hasActiveReveal
+          ? requestAnimationFrame(renderActiveReveals)
+          : null;
+
+        if (!hasActiveReveal) previousRevealTime = 0;
+      };
+
+      const requestRevealRender = () => {
+        if (!revealAnimationFrame) {
+          revealAnimationFrame = requestAnimationFrame(renderActiveReveals);
+        }
+      };
+
+      imageAnimations.forEach(({ image }) => {
+        image.addEventListener("load", requestRevealRender, { once: true });
+      });
+
+      const updateReveals = () => {
+        const viewportHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+        const remainingScroll = documentHeight - (window.scrollY + viewportHeight);
+        const pageEndProgress = smoothstep(1 - remainingScroll / 180);
+        const revealDistance = Math.min(520, Math.max(300, viewportHeight * 0.42));
+        const revealInset = Math.min(112, viewportHeight * 0.14);
+        const imageRevealInset = Math.min(16, viewportHeight * 0.02);
+
+        imageAnimations.forEach((animation) => {
+          const rect = animation.frame.getBoundingClientRect();
+          let entering = smoothstep(
+            (viewportHeight - imageRevealInset - rect.top) / revealDistance
+          );
+
+          if (animation.targetIndex < 5) {
+            const landingReveal = clamp(0.34 - window.scrollY / revealDistance);
+            entering = Math.max(entering, landingReveal);
+          }
+
+          if (entering > 0.005) animation.triggered = true;
+          animation.progress = Math.max(animation.progress, entering);
+        });
+
+        textAnimations.forEach((animation) => {
+          const rect = animation.target.getBoundingClientRect();
+          let entering = smoothstep(
+            (viewportHeight - revealInset - rect.top) / revealDistance
+          );
+
+          if (animation.target.closest(".contact-section")) {
+            entering = Math.max(entering, pageEndProgress);
+          }
+
+          if (entering > 0.005) animation.triggered = true;
+          animation.progress = Math.max(animation.progress, entering);
+        });
+
+        requestRevealRender();
+
+        ticking = false;
+      };
+
+      const requestRevealUpdate = () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(updateReveals);
+      };
+
+      window.addEventListener("scroll", requestRevealUpdate, { passive: true });
+      window.addEventListener("resize", () => {
+        requestRevealUpdate();
+      });
+      requestRevealUpdate();
+    })();
+
+    (() => {
       if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
 
       const preview = document.getElementById("gifHoverPreview");
@@ -910,8 +1327,6 @@
         }
 
         ctx.font = `${fontSize}px "Comic Mono", "Comic Sans Mono", monospace`;
-        ctx.fillStyle = "#303030";
-
         const active = activeCellKeys(now);
 
         for (let row = 0; row <= rows; row++) {
@@ -939,8 +1354,10 @@
             if (energy > 0.09) {
               const saturatedEnergy = Math.min(1, energy);
               const char = getCharacter(saturatedEnergy, x, y, now);
+              const hue = 185 + 25 * Math.sin(x * 0.012 + y * 0.008 - now * 0.0018);
 
               ctx.globalAlpha = Math.min(0.46, 0.08 + saturatedEnergy * 0.52);
+              ctx.fillStyle = `hsl(${hue.toFixed(1)} 78% 42%)`;
               ctx.fillText(char, x, y);
             }
           }
@@ -977,13 +1394,18 @@
         ["-+-", "-+-"],
         ["_~_", "_~_"]
       ];
+      const colors = ["#2563eb", "#0891b2", "#06a6a6", "#10b981", "#38bdf8"];
 
       let index = 0;
+      asciiLeft.style.color = colors[0];
+      asciiRight.style.color = colors[2];
 
       setInterval(() => {
         index = (index + 1) % frames.length;
         asciiLeft.textContent = frames[index][0];
         asciiRight.textContent = frames[index][1];
+        asciiLeft.style.color = colors[index % colors.length];
+        asciiRight.style.color = colors[(index + 2) % colors.length];
       }, 420);
     })();
 
