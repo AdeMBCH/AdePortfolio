@@ -389,6 +389,8 @@
       grid-template-columns: 190px 1fr;
       gap: 2.8rem;
       padding: 1.65rem 0;
+      content-visibility: auto;
+      contain-intrinsic-size: auto 180px;
     }
 
     .section-title {
@@ -522,11 +524,18 @@
       opacity: 1;
     }
 
-    .gif-hover-preview video {
+    .gif-reveal-frame .demo-media.is-hover-preview {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      z-index: 31;
       width: auto;
       height: auto;
       max-width: calc(100vw - 3rem);
       max-height: calc(100vh - 3rem);
+      aspect-ratio: auto;
+      object-fit: contain;
+      transform: translate(-50%, -50%);
       background: #ffffff;
       box-shadow: 0 18px 60px rgba(0, 0, 0, 0.24);
     }
@@ -809,9 +818,7 @@
         </figure>
       </div>
 
-      <div class="gif-hover-preview" id="gifHoverPreview" aria-hidden="true">
-        <video id="gifHoverPreviewVideo" muted loop playsinline preload="none"></video>
-      </div>
+      <div class="gif-hover-preview" id="gifHoverPreview" aria-hidden="true"></div>
 
       <div class="content">
         <section class="section" id="experience" aria-labelledby="experience-title">
@@ -1064,6 +1071,50 @@
       });
     })();
 
+    const PORTFOLIO_FRAME_SCHEDULER = (() => {
+      let nativeFrame = null;
+      let nextId = 1;
+      const callbacks = new Map();
+
+      const flush = (timestamp) => {
+        nativeFrame = null;
+        const frameCallbacks = [...callbacks.entries()];
+        callbacks.clear();
+        frameCallbacks.forEach(([, callback]) => callback(timestamp));
+      };
+
+      return Object.freeze({
+        request(callback) {
+          const id = nextId++;
+          callbacks.set(id, callback);
+          if (!nativeFrame) nativeFrame = window.requestAnimationFrame(flush);
+          return id;
+        },
+        cancel(id) {
+          callbacks.delete(id);
+        }
+      });
+    })();
+
+    const PORTFOLIO_RESIZE_SCHEDULER = (() => {
+      const callbacks = new Set();
+      let scheduledFrame = null;
+
+      window.addEventListener("resize", () => {
+        if (scheduledFrame) return;
+        scheduledFrame = PORTFOLIO_FRAME_SCHEDULER.request(() => {
+          scheduledFrame = null;
+          callbacks.forEach((callback) => callback());
+        });
+      }, { passive: true });
+
+      return Object.freeze({
+        add(callback) {
+          callbacks.add(callback);
+        }
+      });
+    })();
+
     const failOpen = () => document.documentElement.classList.add("effects-failed");
     window.addEventListener("error", failOpen);
     window.addEventListener("unhandledrejection", failOpen);
@@ -1081,10 +1132,12 @@
           video.src = supportsWebm ? video.dataset.src : video.dataset.mp4;
           video.load();
         }
-        if (!PORTFOLIO_RUNTIME.reducedMotion) {
-          const playback = video.play();
-          if (playback && typeof playback.catch === "function") playback.catch(() => {});
-        }
+      };
+
+      const playVideo = (video) => {
+        loadVideo(video);
+        const playback = video.play();
+        if (playback && typeof playback.catch === "function") playback.catch(() => {});
       };
 
       const pauseVideo = (video) => {
@@ -1093,34 +1146,57 @@
 
       if (PORTFOLIO_RUNTIME.constrainedNetwork) {
         videos.forEach((video) => {
-          video.addEventListener("pointerenter", () => loadVideo(video), { once: true });
-          video.closest("a")?.addEventListener("focus", () => loadVideo(video), { once: true });
+          video.addEventListener("pointerenter", () => playVideo(video), { once: true });
+          video.closest("a")?.addEventListener("focus", () => playVideo(video), { once: true });
         });
         return;
       }
 
-      if (!("IntersectionObserver" in window)) return;
+      if (!("IntersectionObserver" in window)) {
+        videos.slice(0, 3).forEach(playVideo);
+        return;
+      }
 
       const visibleVideos = new Set();
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          const video = entry.target;
-          if (entry.isIntersecting) {
+      const visibility = new Map();
+      const reconcilePlayback = () => {
+        const shouldPlay = new Set(
+          [...visibility.entries()]
+            .filter(([, ratio]) => ratio >= 0.25)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([video]) => video)
+        );
+
+        videos.forEach((video) => {
+          if (shouldPlay.has(video) && !document.hidden) {
             visibleVideos.add(video);
-            loadVideo(video);
+            playVideo(video);
           } else {
             visibleVideos.delete(video);
             pauseVideo(video);
           }
         });
+      };
+
+      const loadObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) loadVideo(entry.target);
+        });
       }, { rootMargin: "240px 0px", threshold: 0.01 });
 
-      videos.forEach((video) => observer.observe(video));
+      const playbackObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => visibility.set(entry.target, entry.intersectionRatio));
+        reconcilePlayback();
+      }, { threshold: [0, 0.25, 0.5, 0.75, 1] });
+
+      videos.forEach((video) => {
+        loadObserver.observe(video);
+        playbackObserver.observe(video);
+      });
       document.addEventListener("visibilitychange", () => {
-        visibleVideos.forEach((video) => {
-          if (document.hidden) pauseVideo(video);
-          else loadVideo(video);
-        });
+        if (document.hidden) visibleVideos.forEach(pauseVideo);
+        else reconcilePlayback();
       });
     })();
 
@@ -1146,6 +1222,8 @@
       let previousRevealTime = 0;
       let previousGifRender = 0;
       let ticking = false;
+      let cachedDocumentHeight = document.documentElement.scrollHeight;
+      const textMetrics = new WeakMap();
 
       const clamp = (value, minimum = 0, maximum = 1) => (
         Math.min(maximum, Math.max(minimum, value))
@@ -1333,12 +1411,34 @@
       const textGroups = new Map();
       const activeTextAnimations = new Set();
       const contactTextAnimations = [];
+
+      const measureTextTarget = (target, animations) => {
+        const rect = target.getBoundingClientRect();
+        textMetrics.set(target, { worldTop: rect.top + window.scrollY });
+        animations.forEach((animation) => {
+          if (!target.closest(".contact-section")) return;
+          const animationRect = animation.target.getBoundingClientRect();
+          animation.worldCenterY = animationRect.top + window.scrollY + animationRect.height * 0.5;
+        });
+      };
+
+      const refreshLayoutMetrics = () => {
+        imageAnimations.forEach((animation) => {
+          const rect = animation.frame.getBoundingClientRect();
+          animation.worldTop = rect.top + window.scrollY;
+        });
+        textGroups.forEach((animations, target) => measureTextTarget(target, animations));
+        cachedDocumentHeight = document.documentElement.scrollHeight;
+      };
+
       const prepareVisibleText = (target, index) => {
         const animations = prepareTextTarget(target, index);
         if (target.closest(".contact-section")) {
           contactTextAnimations.push(...animations);
         }
         textGroups.set(target, animations);
+        measureTextTarget(target, animations);
+        cachedDocumentHeight = document.documentElement.scrollHeight;
         requestRevealUpdate();
       };
 
@@ -1392,8 +1492,8 @@
 
           if (localProgress < 1) {
             const seed = glyph.asciiSeed + phase;
+            if (glyph.asciiState !== 1) glyph.className = "ascii-glyph is-scrambling";
             glyph.asciiState = 1;
-            glyph.className = "ascii-glyph is-scrambling";
             glyph.style.setProperty("--ascii-color", colors[Math.abs(seed) % colors.length]);
             glyph.textContent = characters[Math.abs(seed * 7 + phase * 5) % characters.length];
             return;
@@ -1457,7 +1557,7 @@
         }
 
         revealAnimationFrame = hasActiveReveal
-          ? requestAnimationFrame(renderActiveReveals)
+          ? PORTFOLIO_FRAME_SCHEDULER.request(renderActiveReveals)
           : null;
 
         if (!hasActiveReveal) previousRevealTime = 0;
@@ -1465,7 +1565,7 @@
 
       const requestRevealRender = () => {
         if (!revealAnimationFrame) {
-          revealAnimationFrame = requestAnimationFrame(renderActiveReveals);
+          revealAnimationFrame = PORTFOLIO_FRAME_SCHEDULER.request(renderActiveReveals);
         }
       };
 
@@ -1475,9 +1575,7 @@
         contactTextAnimations.forEach((animation) => {
           if (animation.lastShoreCycle === event.detail.cycle) return;
 
-          const rect = animation.target.getBoundingClientRect();
-          const lineWorldY = rect.top + window.scrollY + rect.height * 0.5;
-          if (Math.abs(lineWorldY - event.detail.worldY) > 16) return;
+          if (Math.abs(animation.worldCenterY - event.detail.worldY) > 16) return;
 
           animation.lastShoreCycle = event.detail.cycle;
           animation.shoreReplayUntil = performance.now() + ANIMATION_SETTINGS.textDuration;
@@ -1494,8 +1592,7 @@
 
       const updateReveals = () => {
         const viewportHeight = window.innerHeight;
-        const documentHeight = document.documentElement.scrollHeight;
-        const remainingScroll = documentHeight - (window.scrollY + viewportHeight);
+        const remainingScroll = cachedDocumentHeight - (window.scrollY + viewportHeight);
         const pageEndProgress = smoothstep(
           1 - remainingScroll / ANIMATION_SETTINGS.footerCompletionDistance
         );
@@ -1516,9 +1613,9 @@
         );
 
         imageAnimations.forEach((animation) => {
-          const rect = animation.frame.getBoundingClientRect();
+          const viewportTop = animation.worldTop - window.scrollY;
           let entering = smoothstep(
-            (viewportHeight - imageRevealInset - rect.top) / revealDistance
+            (viewportHeight - imageRevealInset - viewportTop) / revealDistance
           );
 
           if (animation.targetIndex < ANIMATION_SETTINGS.landingImageCount) {
@@ -1534,9 +1631,10 @@
 
         textGroups.forEach((animations, target) => {
           if (!animations.length) return;
-          const rect = target.getBoundingClientRect();
+          const metrics = textMetrics.get(target);
+          const viewportTop = metrics.worldTop - window.scrollY;
           let entering = smoothstep(
-            (viewportHeight - revealInset - rect.top) / revealDistance
+            (viewportHeight - revealInset - viewportTop) / revealDistance
           );
           const isContactTarget = Boolean(target.closest(".contact-section"));
 
@@ -1567,16 +1665,22 @@
       const requestRevealUpdate = () => {
         if (ticking) return;
         ticking = true;
-        requestAnimationFrame(updateReveals);
+        PORTFOLIO_FRAME_SCHEDULER.request(updateReveals);
       };
 
       window.addEventListener("scroll", requestRevealUpdate, { passive: true });
-      window.addEventListener("resize", () => {
+      PORTFOLIO_RESIZE_SCHEDULER.add(() => {
         imageAnimations.forEach((animation) => {
           animation.renderedProgress = -1;
           animation.width = 0;
           animation.height = 0;
         });
+        refreshLayoutMetrics();
+        requestRevealUpdate();
+      });
+      refreshLayoutMetrics();
+      document.fonts?.ready.then(() => {
+        refreshLayoutMetrics();
         requestRevealUpdate();
       });
       requestRevealUpdate();
@@ -1743,7 +1847,7 @@
           }
         }
 
-        animationFrame = requestAnimationFrame(drawShoreWave);
+        animationFrame = PORTFOLIO_FRAME_SCHEDULER.request(drawShoreWave);
       };
 
       const observer = new IntersectionObserver((entries) => {
@@ -1757,7 +1861,7 @@
           cycleStart = performance.now();
           previousFrame = 0;
           resizeWave();
-          if (!animationFrame) animationFrame = requestAnimationFrame(drawShoreWave);
+          if (!animationFrame) animationFrame = PORTFOLIO_FRAME_SCHEDULER.request(drawShoreWave);
         } else {
           context.clearRect(0, 0, width, height);
           const rect = section.getBoundingClientRect();
@@ -1766,7 +1870,7 @@
         }
       }, { threshold: 0.08 });
 
-      window.addEventListener("resize", resizeWave);
+      PORTFOLIO_RESIZE_SCHEDULER.add(resizeWave);
       observer.observe(section);
       resizeWave();
     })();
@@ -1790,7 +1894,6 @@
       let previousFrame = 0;
       let fishVisibleLastFrame = true;
       let animationFrame = null;
-      let idleTimer = null;
 
       const isMobileViewport = () => window.innerWidth <= ANIMATION_SETTINGS.mobileBreakpoint;
       const randomBetween = (minimum, maximum) => minimum + Math.random() * (maximum - minimum);
@@ -1993,10 +2096,7 @@
 
       const animateFish = (timestamp) => {
         animationFrame = null;
-        const canIdle = !fishVisibleLastFrame && !food.active && !shockwaves.length;
-        const frameInterval = canIdle
-          ? 180
-          : PORTFOLIO_RUNTIME.level === "lite"
+        const frameInterval = PORTFOLIO_RUNTIME.level === "lite"
             ? 66
             : isMobileViewport()
               ? ANIMATION_SETTINGS.mobileFishFrameInterval
@@ -2004,7 +2104,7 @@
 
         if (timestamp - previousFrame >= frameInterval) {
           const delta = previousFrame
-            ? Math.min(canIdle ? 0.2 : 0.06, (timestamp - previousFrame) / 1000)
+            ? Math.min(0.06, (timestamp - previousFrame) / 1000)
             : 0;
 
           previousFrame = timestamp;
@@ -2050,19 +2150,14 @@
           }
         }
 
-        const shouldSleep = !fishVisibleLastFrame && !food.active && !shockwaves.length;
-        if (shouldSleep) {
-          idleTimer = window.setTimeout(wakeFish, 160);
-        } else {
-          animationFrame = requestAnimationFrame(animateFish);
+        if (fishVisibleLastFrame || food.active || shockwaves.length) {
+          animationFrame = PORTFOLIO_FRAME_SCHEDULER.request(animateFish);
         }
       };
 
       function wakeFish() {
-        window.clearTimeout(idleTimer);
-        idleTimer = null;
         if (!document.hidden && !animationFrame) {
-          animationFrame = requestAnimationFrame(animateFish);
+          animationFrame = PORTFOLIO_FRAME_SCHEDULER.request(animateFish);
         }
       }
 
@@ -2140,6 +2235,7 @@
         pointer.expires = event.pointerType === "mouse"
           ? Infinity
           : performance.now() + 1400;
+        wakeFish();
       }, { passive: true });
 
       window.addEventListener("pointerdown", (event) => {
@@ -2155,15 +2251,13 @@
 
       document.addEventListener("visibilitychange", () => {
         if (document.hidden) {
-          if (animationFrame) cancelAnimationFrame(animationFrame);
-          window.clearTimeout(idleTimer);
+          if (animationFrame) PORTFOLIO_FRAME_SCHEDULER.cancel(animationFrame);
           animationFrame = null;
-          idleTimer = null;
           previousFrame = 0;
         } else wakeFish();
       });
 
-      window.addEventListener("resize", resizeCanvas);
+      PORTFOLIO_RESIZE_SCHEDULER.add(resizeCanvas);
       window.addEventListener("scroll", () => {
         fishVisibleLastFrame = true;
         previousFrame = 0;
@@ -2371,35 +2465,38 @@
       if (PORTFOLIO_RUNTIME.reducedMotion) return;
 
       const preview = document.getElementById("gifHoverPreview");
-      const previewVideo = document.getElementById("gifHoverPreviewVideo");
       const thumbnails = document.querySelectorAll(".demo-showcase .demo-media");
+      let activeThumbnail = null;
 
-      if (!preview || !previewVideo || !thumbnails.length) return;
+      if (!preview || !thumbnails.length) return;
 
       const hidePreview = () => {
         preview.classList.remove("is-visible");
-        previewVideo.pause();
+        activeThumbnail?.classList.remove("is-hover-preview");
+        activeThumbnail = null;
       };
 
       thumbnails.forEach((thumbnail) => {
-        thumbnail.addEventListener("mouseenter", () => {
+        const hoverTarget = thumbnail.closest(".demo-link") || thumbnail;
+        hoverTarget.addEventListener("mouseenter", () => {
           const source = thumbnail.currentSrc || thumbnail.src || thumbnail.dataset.src;
           if (!source) return;
-          if (previewVideo.src !== new URL(source, document.baseURI).href) {
-            previewVideo.src = source;
-            previewVideo.poster = thumbnail.poster;
+          hidePreview();
+          activeThumbnail = thumbnail;
+          thumbnail.classList.add("is-hover-preview");
+          if (!thumbnail.src) {
+            const supportsWebm = Boolean(
+              thumbnail.canPlayType && thumbnail.canPlayType('video/webm; codecs="vp9"')
+            );
+            thumbnail.src = supportsWebm ? thumbnail.dataset.src : thumbnail.dataset.mp4;
+            thumbnail.load();
           }
-          const playback = previewVideo.play();
+          const playback = thumbnail.play();
           if (playback && typeof playback.catch === "function") playback.catch(() => {});
-          thumbnail.pause();
           preview.classList.add("is-visible");
         });
 
-        thumbnail.addEventListener("mouseleave", () => {
-          hidePreview();
-          const playback = thumbnail.play();
-          if (playback && typeof playback.catch === "function") playback.catch(() => {});
-        });
+        hoverTarget.addEventListener("mouseleave", hidePreview);
       });
 
       window.addEventListener("blur", hidePreview);
@@ -2497,7 +2594,7 @@
         }
 
         if (!animationFrame) {
-          animationFrame = requestAnimationFrame(drawRipples);
+          animationFrame = PORTFOLIO_FRAME_SCHEDULER.request(drawRipples);
         }
       }
 
@@ -2559,7 +2656,7 @@
       function drawRipples(now) {
         const frameInterval = PORTFOLIO_RUNTIME.level === "lite" ? 66 : 33;
         if (now - previousRippleFrame < frameInterval) {
-          animationFrame = requestAnimationFrame(drawRipples);
+          animationFrame = PORTFOLIO_FRAME_SCHEDULER.request(drawRipples);
           return;
         }
         previousRippleFrame = now;
@@ -2623,7 +2720,7 @@
         }
 
         ctx.globalAlpha = 1;
-        animationFrame = requestAnimationFrame(drawRipples);
+        animationFrame = PORTFOLIO_FRAME_SCHEDULER.request(drawRipples);
       }
 
       window.addEventListener("pointerdown", (event) => {
@@ -2632,7 +2729,7 @@
         addRipple(event.clientX, event.clientY);
       }, { passive: true });
 
-      window.addEventListener("resize", resizeRippleCanvas);
+      PORTFOLIO_RESIZE_SCHEDULER.add(resizeRippleCanvas);
 
       resizeRippleCanvas();
     })();
@@ -2811,17 +2908,17 @@
           previousShipFrame = now;
           drawShip(now * 0.001);
         }
-        shipFrame = requestAnimationFrame(frame);
+        shipFrame = PORTFOLIO_FRAME_SCHEDULER.request(frame);
       }
 
       const syncShip = () => {
         if (shipVisible && !document.hidden && !shipFrame) {
-          shipFrame = requestAnimationFrame(frame);
+          shipFrame = PORTFOLIO_FRAME_SCHEDULER.request(frame);
         }
       };
 
       resizeCanvas();
-      window.addEventListener("resize", resizeCanvas);
+      PORTFOLIO_RESIZE_SCHEDULER.add(resizeCanvas);
       document.addEventListener("visibilitychange", syncShip);
       if ("IntersectionObserver" in window) {
         new IntersectionObserver((entries) => {
