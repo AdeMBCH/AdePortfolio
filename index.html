@@ -516,6 +516,7 @@
       pointer-events: none;
       visibility: hidden;
       opacity: 0;
+      background: rgba(255, 255, 255, 0.72);
       transition: opacity 140ms ease, visibility 140ms ease;
     }
 
@@ -524,18 +525,14 @@
       opacity: 1;
     }
 
-    .gif-reveal-frame .demo-media.is-hover-preview {
-      position: fixed;
-      left: 50%;
-      top: 50%;
-      z-index: 31;
+    .gif-hover-preview video {
+      display: block;
       width: auto;
       height: auto;
       max-width: calc(100vw - 3rem);
       max-height: calc(100vh - 3rem);
       aspect-ratio: auto;
       object-fit: contain;
-      transform: translate(-50%, -50%);
       background: #ffffff;
       box-shadow: 0 18px 60px rgba(0, 0, 0, 0.24);
     }
@@ -818,7 +815,9 @@
         </figure>
       </div>
 
-      <div class="gif-hover-preview" id="gifHoverPreview" aria-hidden="true"></div>
+      <div class="gif-hover-preview" id="gifHoverPreview" aria-hidden="true">
+        <video id="gifHoverPreviewVideo" muted loop playsinline preload="none"></video>
+      </div>
 
       <div class="content">
         <section class="section" id="experience" aria-labelledby="experience-title">
@@ -1024,10 +1023,10 @@
       rippleRingWidth: 22,
       rippleLimit: 14,
       indexWaveInterval: 420,
-      desktopFishCount: 6,
-      mobileFishCount: 6,
-      fishFrameInterval: 33,
-      mobileFishFrameInterval: 50,
+      desktopFishCount: 4,
+      mobileFishCount: 3,
+      fishFrameInterval: 50,
+      mobileFishFrameInterval: 66,
       fishScareDistance: 155,
       letterHoldDelay: 620,
       letterLoosenDelay: 180,
@@ -1035,8 +1034,8 @@
       fishFoodEatDistance: 22,
       shoreCycleDuration: 8200,
       shoreAdvanceRatio: 0.62,
-      shoreFrameInterval: 34,
-      mobileShoreFrameInterval: 52,
+      shoreFrameInterval: 50,
+      mobileShoreFrameInterval: 66,
       shoreStartRatio: 0.26,
       shoreEndRatio: 0.9
     });
@@ -1073,25 +1072,79 @@
 
     const PORTFOLIO_FRAME_SCHEDULER = (() => {
       let nativeFrame = null;
+      let wakeTimer = null;
+      let wakeTime = Infinity;
       let nextId = 1;
       const callbacks = new Map();
+      const readyCallbacks = [];
+
+      const scheduleWake = () => {
+        if (nativeFrame || !callbacks.size) return;
+
+        let earliest = Infinity;
+        callbacks.forEach((entry) => {
+          if (entry.due < earliest) earliest = entry.due;
+        });
+
+        if (wakeTimer) {
+          if (earliest >= wakeTime - 1) return;
+          window.clearTimeout(wakeTimer);
+          wakeTimer = null;
+        }
+
+        const delay = Math.max(0, earliest - performance.now());
+        if (delay > 8) {
+          wakeTime = earliest;
+          wakeTimer = window.setTimeout(() => {
+            wakeTimer = null;
+            wakeTime = Infinity;
+            if (callbacks.size && !nativeFrame) {
+              nativeFrame = window.requestAnimationFrame(flush);
+            }
+          }, delay - 4);
+        } else {
+          nativeFrame = window.requestAnimationFrame(flush);
+        }
+      };
 
       const flush = (timestamp) => {
         nativeFrame = null;
-        const frameCallbacks = [...callbacks.entries()];
-        callbacks.clear();
-        frameCallbacks.forEach(([, callback]) => callback(timestamp));
+        readyCallbacks.length = 0;
+
+        callbacks.forEach((entry, id) => {
+          if (entry.due <= timestamp + 1) {
+            callbacks.delete(id);
+            readyCallbacks.push(entry.callback);
+          }
+        });
+
+        readyCallbacks.forEach((callback) => {
+          try {
+            callback(timestamp);
+          } catch (error) {
+            window.setTimeout(() => { throw error; }, 0);
+          }
+        });
+        scheduleWake();
       };
 
       return Object.freeze({
-        request(callback) {
+        request(callback, delay = 0) {
           const id = nextId++;
-          callbacks.set(id, callback);
-          if (!nativeFrame) nativeFrame = window.requestAnimationFrame(flush);
+          callbacks.set(id, {
+            callback,
+            due: performance.now() + Math.max(0, delay)
+          });
+          scheduleWake();
           return id;
         },
         cancel(id) {
           callbacks.delete(id);
+          if (!callbacks.size && wakeTimer) {
+            window.clearTimeout(wakeTimer);
+            wakeTimer = null;
+            wakeTime = Infinity;
+          }
         }
       });
     })();
@@ -1146,25 +1199,65 @@
 
       if (PORTFOLIO_RUNTIME.constrainedNetwork) {
         videos.forEach((video) => {
-          video.addEventListener("pointerenter", () => playVideo(video), { once: true });
-          video.closest("a")?.addEventListener("focus", () => playVideo(video), { once: true });
+          video.addEventListener("pointerenter", () => playVideo(video));
+          video.addEventListener("pointerleave", () => pauseVideo(video));
+          const link = video.closest("a");
+          if (link) {
+            link.addEventListener("focus", () => playVideo(video));
+            link.addEventListener("blur", () => pauseVideo(video));
+          }
+        });
+        document.addEventListener("visibilitychange", () => {
+          if (document.hidden) videos.forEach(pauseVideo);
         });
         return;
       }
 
       if (!("IntersectionObserver" in window)) {
-        videos.slice(0, 3).forEach(playVideo);
+        let fallbackFrame = null;
+        const updateFallbackPlayback = () => {
+          fallbackFrame = null;
+          const viewportCenter = window.innerHeight * 0.5;
+          let closestVideo = null;
+          let closestDistance = Infinity;
+
+          videos.forEach((video) => {
+            const rect = video.getBoundingClientRect();
+            if (rect.bottom <= 0 || rect.top >= window.innerHeight) return;
+            const distance = Math.abs(rect.top + rect.height * 0.5 - viewportCenter);
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              closestVideo = video;
+            }
+          });
+
+          videos.forEach((video) => {
+            if (video === closestVideo && !document.hidden) playVideo(video);
+            else pauseVideo(video);
+          });
+        };
+        const requestFallbackPlayback = () => {
+          if (!fallbackFrame) {
+            fallbackFrame = PORTFOLIO_FRAME_SCHEDULER.request(updateFallbackPlayback);
+          }
+        };
+
+        window.addEventListener("scroll", requestFallbackPlayback, { passive: true });
+        PORTFOLIO_RESIZE_SCHEDULER.add(requestFallbackPlayback);
+        document.addEventListener("visibilitychange", requestFallbackPlayback);
+        requestFallbackPlayback();
         return;
       }
 
       const visibleVideos = new Set();
       const visibility = new Map();
+      const playbackBudget = PORTFOLIO_RUNTIME.level === "full" ? 2 : 1;
       const reconcilePlayback = () => {
         const shouldPlay = new Set(
           [...visibility.entries()]
             .filter(([, ratio]) => ratio >= 0.25)
             .sort((a, b) => b[1] - a[1])
-            .slice(0, 3)
+            .slice(0, playbackBudget)
             .map(([video]) => video)
         );
 
@@ -1509,7 +1602,7 @@
 
       const renderActiveReveals = (timestamp) => {
         const delta = previousRevealTime
-          ? Math.min(50, timestamp - previousRevealTime)
+          ? Math.min(100, timestamp - previousRevealTime)
           : 0;
         let hasActiveReveal = false;
         let hasActiveGif = false;
@@ -1545,6 +1638,12 @@
         const gifFrameInterval = isMobileViewport()
           ? ANIMATION_SETTINGS.mobileGifFrameInterval
           : ANIMATION_SETTINGS.gifFrameInterval;
+        const textFrameInterval = ANIMATION_SETTINGS.textDuration / (
+          isMobileViewport()
+            ? ANIMATION_SETTINGS.mobileTextPhases
+            : ANIMATION_SETTINGS.textPhases
+        );
+        const revealFrameInterval = Math.min(gifFrameInterval, textFrameInterval);
 
         if (timestamp - previousGifRender >= gifFrameInterval || !hasActiveGif) {
           imageAnimations.forEach((animation) => {
@@ -1557,7 +1656,7 @@
         }
 
         revealAnimationFrame = hasActiveReveal
-          ? PORTFOLIO_FRAME_SCHEDULER.request(renderActiveReveals)
+          ? PORTFOLIO_FRAME_SCHEDULER.request(renderActiveReveals, revealFrameInterval)
           : null;
 
         if (!hasActiveReveal) previousRevealTime = 0;
@@ -1679,10 +1778,12 @@
         requestRevealUpdate();
       });
       refreshLayoutMetrics();
-      document.fonts?.ready.then(() => {
-        refreshLayoutMetrics();
-        requestRevealUpdate();
-      });
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+          refreshLayoutMetrics();
+          requestRevealUpdate();
+        });
+      }
       requestRevealUpdate();
     })();
 
@@ -1695,6 +1796,14 @@
       if (!section || !canvas || !context) return;
 
       const foamCharacters = ["~", "-", ".", ":", "o", "*", "+"];
+      const waveStepA = {
+        sin: Math.sin(0.31),
+        cos: Math.cos(0.31)
+      };
+      const waveStepB = {
+        sin: Math.sin(0.09),
+        cos: Math.cos(0.09)
+      };
       let width = 0;
       let height = 0;
       let sectionWorldTop = 0;
@@ -1752,12 +1861,21 @@
         const firstRow = Math.floor((baseY - bandRadius) / cellSize);
         const lastRow = Math.ceil((baseY + bandRadius) / cellSize);
         const columnCount = Math.ceil(width / cellSize);
+        let waveSinA = Math.sin(timestamp * 0.0009);
+        let waveCosA = Math.cos(timestamp * 0.0009);
+        let waveSinB = Math.sin(-timestamp * 0.00055);
+        let waveCosB = Math.cos(-timestamp * 0.00055);
 
         for (let column = 0; column <= columnCount; column += 1) {
           const x = column * cellSize;
-          const curve = baseY +
-            Math.sin(column * 0.31 + timestamp * 0.0009) * 13 +
-            Math.sin(column * 0.09 - timestamp * 0.00055) * 7;
+          const curve = baseY + waveSinA * 13 + waveSinB * 7;
+
+          const nextWaveSinA = waveSinA * waveStepA.cos + waveCosA * waveStepA.sin;
+          waveCosA = waveCosA * waveStepA.cos - waveSinA * waveStepA.sin;
+          waveSinA = nextWaveSinA;
+          const nextWaveSinB = waveSinB * waveStepB.cos + waveCosB * waveStepB.sin;
+          waveCosB = waveCosB * waveStepB.cos - waveSinB * waveStepB.sin;
+          waveSinB = nextWaveSinB;
 
           for (let row = firstRow; row <= lastRow; row += 1) {
             const y = row * cellSize;
@@ -1847,11 +1965,10 @@
           }
         }
 
-        animationFrame = PORTFOLIO_FRAME_SCHEDULER.request(drawShoreWave);
+        animationFrame = PORTFOLIO_FRAME_SCHEDULER.request(drawShoreWave, frameInterval);
       };
 
-      const observer = new IntersectionObserver((entries) => {
-        const isVisible = entries.some((entry) => entry.isIntersecting);
+      const setShoreVisibility = (isVisible) => {
         if (isVisible === active) return;
 
         active = isVisible;
@@ -1868,11 +1985,32 @@
           PORTFOLIO_SHORE_STATE.worldY = rect.top + window.scrollY +
             height * ANIMATION_SETTINGS.shoreEndRatio;
         }
-      }, { threshold: 0.08 });
+      };
 
       PORTFOLIO_RESIZE_SCHEDULER.add(resizeWave);
-      observer.observe(section);
       resizeWave();
+
+      if ("IntersectionObserver" in window) {
+        const observer = new IntersectionObserver((entries) => {
+          setShoreVisibility(entries.some((entry) => entry.isIntersecting));
+        }, { threshold: 0.08 });
+        observer.observe(section);
+      } else {
+        let visibilityFrame = null;
+        const updateShoreVisibility = () => {
+          visibilityFrame = null;
+          const rect = section.getBoundingClientRect();
+          setShoreVisibility(rect.bottom > 0 && rect.top < window.innerHeight);
+        };
+        const requestShoreVisibility = () => {
+          if (!visibilityFrame) {
+            visibilityFrame = PORTFOLIO_FRAME_SCHEDULER.request(updateShoreVisibility);
+          }
+        };
+        window.addEventListener("scroll", requestShoreVisibility, { passive: true });
+        PORTFOLIO_RESIZE_SCHEDULER.add(requestShoreVisibility);
+        requestShoreVisibility();
+      }
     })();
 
     (() => {
@@ -1897,7 +2035,15 @@
 
       const isMobileViewport = () => window.innerWidth <= ANIMATION_SETTINGS.mobileBreakpoint;
       const randomBetween = (minimum, maximum) => minimum + Math.random() * (maximum - minimum);
-      const normalizeAngle = (angle) => Math.atan2(Math.sin(angle), Math.cos(angle));
+      const fullTurn = Math.PI * 2;
+      const normalizeAngle = (angle) => {
+        const wrapped = (angle + Math.PI) % fullTurn;
+        return (wrapped < 0 ? wrapped + fullTurn : wrapped) - Math.PI;
+      };
+      const scareDistanceSquared = ANIMATION_SETTINGS.fishScareDistance *
+        ANIMATION_SETTINGS.fishScareDistance;
+      const eatDistanceSquared = ANIMATION_SETTINGS.fishFoodEatDistance *
+        ANIMATION_SETTINGS.fishFoodEatDistance;
 
       const swimBottom = (clearance = 0) => Math.max(
         height * 0.55,
@@ -1993,8 +2139,8 @@
         return fishSprite;
       };
 
-      const drawSprite = (fish) => {
-        const screenY = fish.y - window.scrollY;
+      const drawSprite = (fish, scrollY) => {
+        const screenY = fish.y - scrollY;
         if (screenY < -fish.size || screenY > height + fish.size) return false;
 
         const tailFrame = Math.round(Math.sin(fish.phase) * 2);
@@ -2016,16 +2162,18 @@
         return true;
       };
 
-      const updateFish = (fish, delta, timestamp) => {
+      const updateFish = (fish, delta, timestamp, scrollY) => {
         const edgeMargin = Math.min(100, Math.min(width, height) * 0.14);
         const verticalMargin = Math.min(100, (fish.maxY - fish.minY) * 0.14);
         const shoreLimit = swimBottom(fish.size * 0.62);
         const pointerIsActive = pointer.active && timestamp < pointer.expires;
-        const pointerWorldY = pointer.y + window.scrollY;
-        const pointerDistance = pointerIsActive
-          ? Math.hypot(fish.x - pointer.x, fish.y - pointerWorldY)
+        const pointerWorldY = pointer.y + scrollY;
+        const pointerDx = fish.x - pointer.x;
+        const pointerDy = fish.y - pointerWorldY;
+        const pointerDistanceSquared = pointerIsActive
+          ? pointerDx * pointerDx + pointerDy * pointerDy
           : Infinity;
-        const isThreatened = pointerDistance < ANIMATION_SETTINGS.fishScareDistance;
+        const isThreatened = pointerDistanceSquared < scareDistanceSquared;
         let isChasingFood = false;
 
         if (fish.y > shoreLimit - Math.max(55, fish.size * 1.8)) {
@@ -2035,19 +2183,21 @@
           );
           fish.burst = Math.max(fish.burst, 0.7);
         } else if (food.active) {
-          const foodDistance = Math.hypot(fish.x - food.x, fish.y - food.y);
-          const orbit = foodDistance < 24
+          const foodDx = fish.x - food.x;
+          const foodDy = fish.y - food.y;
+          const isNearFood = foodDx * foodDx + foodDy * foodDy < 24 * 24;
+          const orbit = isNearFood
             ? Math.sin(timestamp * 0.012 + fish.phase) * 0.9
             : 0;
 
           fish.targetHeading = Math.atan2(food.y - fish.y, food.x - fish.x) + orbit;
-          fish.burst = Math.max(fish.burst, foodDistance < 24 ? 0.45 : 1.15);
+          fish.burst = Math.max(fish.burst, isNearFood ? 0.45 : 1.15);
           isChasingFood = true;
         } else if (isThreatened) {
           fish.targetHeading = Math.atan2(fish.y - pointerWorldY, fish.x - pointer.x);
           fish.burst = Math.max(
             fish.burst,
-            1 - pointerDistance / ANIMATION_SETTINGS.fishScareDistance
+            1 - Math.sqrt(pointerDistanceSquared) / ANIMATION_SETTINGS.fishScareDistance
           );
         } else if (
           fish.x < edgeMargin || fish.x > width - edgeMargin ||
@@ -2065,9 +2215,16 @@
 
             const age = timestamp - shockwave.start;
             const radius = age * ANIMATION_SETTINGS.rippleWaveSpeed;
-            const distance = Math.hypot(fish.x - shockwave.x, fish.y - shockwave.y);
+            const shockwaveDx = fish.x - shockwave.x;
+            const shockwaveDy = fish.y - shockwave.y;
+            const distanceSquared = shockwaveDx * shockwaveDx + shockwaveDy * shockwaveDy;
+            const innerRadius = Math.max(0, radius - 24);
+            const outerRadius = radius + 24;
 
-            if (Math.abs(distance - radius) < 24) {
+            if (
+              distanceSquared > innerRadius * innerRadius &&
+              distanceSquared < outerRadius * outerRadius
+            ) {
               fish.lastShockwave = shockwave.id;
               fish.targetHeading = Math.atan2(fish.y - shockwave.y, fish.x - shockwave.x);
               fish.burst = Math.max(fish.burst, 1.2);
@@ -2108,6 +2265,7 @@
             : 0;
 
           previousFrame = timestamp;
+          const scrollY = window.scrollY;
           while (
             shockwaves.length &&
             timestamp - shockwaves[0].start > ANIMATION_SETTINGS.rippleLifespan
@@ -2116,7 +2274,7 @@
           }
 
           const fishMayBeVisible = fishes.some((fish) => {
-            const screenY = fish.y - window.scrollY;
+            const screenY = fish.y - scrollY;
             return screenY >= -fish.size && screenY <= height + fish.size;
           });
           if (fishMayBeVisible || fishVisibleLastFrame) {
@@ -2125,14 +2283,15 @@
 
           let drewFish = false;
           fishes.forEach((fish) => {
-            updateFish(fish, delta, timestamp);
-            drewFish = drawSprite(fish) || drewFish;
+            updateFish(fish, delta, timestamp, scrollY);
+            drewFish = drawSprite(fish, scrollY) || drewFish;
           });
           fishVisibleLastFrame = drewFish;
 
           if (food.active && food.dropped) {
             const eater = fishes.find((fish) => (
-              Math.hypot(fish.x - food.x, fish.y - food.y) <= ANIMATION_SETTINGS.fishFoodEatDistance
+              (fish.x - food.x) * (fish.x - food.x) +
+              (fish.y - food.y) * (fish.y - food.y) <= eatDistanceSquared
             ));
 
             if (eater) {
@@ -2151,7 +2310,7 @@
         }
 
         if (fishVisibleLastFrame || food.active || shockwaves.length) {
-          animationFrame = PORTFOLIO_FRAME_SCHEDULER.request(animateFish);
+          animationFrame = PORTFOLIO_FRAME_SCHEDULER.request(animateFish, frameInterval);
         }
       };
 
@@ -2461,42 +2620,49 @@
     })();
 
     (() => {
-      if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
-      if (PORTFOLIO_RUNTIME.reducedMotion) return;
+      const supportsHover = !window.matchMedia ||
+        window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+      if (!supportsHover) return;
 
       const preview = document.getElementById("gifHoverPreview");
+      const previewVideo = document.getElementById("gifHoverPreviewVideo");
       const thumbnails = document.querySelectorAll(".demo-showcase .demo-media");
-      let activeThumbnail = null;
 
-      if (!preview || !thumbnails.length) return;
+      if (!preview || !previewVideo || !thumbnails.length) return;
 
       const hidePreview = () => {
         preview.classList.remove("is-visible");
-        activeThumbnail?.classList.remove("is-hover-preview");
-        activeThumbnail = null;
+        previewVideo.pause();
       };
 
       thumbnails.forEach((thumbnail) => {
         const hoverTarget = thumbnail.closest(".demo-link") || thumbnail;
-        hoverTarget.addEventListener("mouseenter", () => {
-          const source = thumbnail.currentSrc || thumbnail.src || thumbnail.dataset.src;
+        const showPreview = () => {
+          const supportsWebm = Boolean(
+            thumbnail.canPlayType && thumbnail.canPlayType('video/webm; codecs="vp9"')
+          );
+          const source = thumbnail.currentSrc || thumbnail.src ||
+            (supportsWebm ? thumbnail.dataset.src : thumbnail.dataset.mp4);
           if (!source) return;
-          hidePreview();
-          activeThumbnail = thumbnail;
-          thumbnail.classList.add("is-hover-preview");
-          if (!thumbnail.src) {
-            const supportsWebm = Boolean(
-              thumbnail.canPlayType && thumbnail.canPlayType('video/webm; codecs="vp9"')
-            );
-            thumbnail.src = supportsWebm ? thumbnail.dataset.src : thumbnail.dataset.mp4;
-            thumbnail.load();
-          }
-          const playback = thumbnail.play();
-          if (playback && typeof playback.catch === "function") playback.catch(() => {});
-          preview.classList.add("is-visible");
-        });
 
+          const absoluteSource = new URL(source, document.baseURI).href;
+          if (previewVideo.src !== absoluteSource) {
+            previewVideo.src = source;
+            previewVideo.poster = thumbnail.poster;
+            previewVideo.load();
+          }
+
+          preview.classList.add("is-visible");
+          if (!PORTFOLIO_RUNTIME.reducedMotion) {
+            const playback = previewVideo.play();
+            if (playback && typeof playback.catch === "function") playback.catch(() => {});
+          }
+        };
+
+        hoverTarget.addEventListener("mouseenter", showPreview);
         hoverTarget.addEventListener("mouseleave", hidePreview);
+        hoverTarget.addEventListener("focus", showPreview);
+        hoverTarget.addEventListener("blur", hidePreview);
       });
 
       window.addEventListener("blur", hidePreview);
@@ -2521,7 +2687,10 @@
       let cellH = 14;
       let columns = 0;
       let rows = 0;
-      let ripples = [];
+      let activeMasks = new Uint16Array(0);
+      let activeIndices = new Uint32Array(0);
+      let activeCount = 0;
+      const ripples = [];
       let previousRippleFrame = 0;
       let animationFrame = null;
 
@@ -2569,6 +2738,10 @@
 
         columns = Math.ceil(width / cellW);
         rows = Math.ceil(height / cellH);
+        const cellCount = (columns + 1) * (rows + 1);
+        activeMasks = new Uint16Array(cellCount);
+        activeIndices = new Uint32Array(cellCount);
+        activeCount = 0;
 
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
@@ -2590,7 +2763,7 @@
         }));
 
         if (ripples.length > maxRipples) {
-          ripples = ripples.slice(ripples.length - maxRipples);
+          ripples.splice(0, ripples.length - maxRipples);
         }
 
         if (!animationFrame) {
@@ -2606,25 +2779,29 @@
         return chars[index];
       }
 
-      function markColumns(active, row, xStart, xEnd, rippleMask) {
+      function markColumns(row, xStart, xEnd, rippleMask) {
         const colMin = Math.max(0, Math.floor(xStart / cellW));
         const colMax = Math.min(columns, Math.ceil(xEnd / cellW));
         const base = row * (columns + 1);
 
         for (let col = colMin; col <= colMax; col++) {
           const key = base + col;
-          active.set(key, (active.get(key) || 0) | rippleMask);
+          if (activeMasks[key] === 0) activeIndices[activeCount++] = key;
+          activeMasks[key] |= rippleMask;
         }
       }
 
       // Flags every grid cell that sits within ringReach of an active wavefront.
       // Those are the only cells whose energy can cross the draw threshold.
-      function activeCellKeys(now) {
-        const active = new Map();
+      function updateActiveCells() {
+        for (let index = 0; index < activeCount; index += 1) {
+          activeMasks[activeIndices[index]] = 0;
+        }
+        activeCount = 0;
 
         ripples.forEach((ripple, rippleIndex) => {
           const rippleMask = 1 << rippleIndex;
-          const radius = (now - ripple.start) * waveSpeed;
+          const radius = ripple.radius;
           const outer = radius + ringReach;
           const inner = radius - ringReach;
 
@@ -2642,42 +2819,58 @@
 
             if (innerSpan > 0) {
               const innerDx = Math.sqrt(innerSpan);
-              markColumns(active, row, ripple.x - outerDx, ripple.x - innerDx, rippleMask);
-              markColumns(active, row, ripple.x + innerDx, ripple.x + outerDx, rippleMask);
+              markColumns(row, ripple.x - outerDx, ripple.x - innerDx, rippleMask);
+              markColumns(row, ripple.x + innerDx, ripple.x + outerDx, rippleMask);
             } else {
-              markColumns(active, row, ripple.x - outerDx, ripple.x + outerDx, rippleMask);
+              markColumns(row, ripple.x - outerDx, ripple.x + outerDx, rippleMask);
             }
           }
         });
-
-        return active;
       }
 
       function drawRipples(now) {
         const frameInterval = PORTFOLIO_RUNTIME.level === "lite" ? 66 : 33;
         if (now - previousRippleFrame < frameInterval) {
-          animationFrame = PORTFOLIO_FRAME_SCHEDULER.request(drawRipples);
+          animationFrame = PORTFOLIO_FRAME_SCHEDULER.request(
+            drawRipples,
+            frameInterval - (now - previousRippleFrame)
+          );
           return;
         }
         previousRippleFrame = now;
         ctx.clearRect(0, 0, width, height);
 
-        ripples = ripples.filter((ripple) => now - ripple.start < lifespan);
+        let liveRippleCount = 0;
+        for (let index = 0; index < ripples.length; index += 1) {
+          if (now - ripples[index].start < lifespan) {
+            ripples[liveRippleCount++] = ripples[index];
+          }
+        }
+        ripples.length = liveRippleCount;
 
         if (!ripples.length) {
           animationFrame = null;
           return;
         }
 
+        ripples.forEach((ripple) => {
+          ripple.age = now - ripple.start;
+          ripple.radius = ripple.age * waveSpeed;
+          ripple.fade = 1 - ripple.age / lifespan;
+        });
+
         ctx.font = `${fontSize}px "Comic Mono", "Comic Sans Mono", monospace`;
-        const active = activeCellKeys(now);
+        updateActiveCells();
 
         const rowStride = columns + 1;
-        for (const [key, rippleMask] of active) {
+        const scrollY = window.scrollY;
+        for (let activeIndex = 0; activeIndex < activeCount; activeIndex += 1) {
+          const key = activeIndices[activeIndex];
+          const rippleMask = activeMasks[key];
           const row = Math.floor(key / rowStride);
           const col = key - row * rowStride;
           const y = row * cellH;
-          if (y + window.scrollY >= PORTFOLIO_SHORE_STATE.worldY) continue;
+          if (y + scrollY >= PORTFOLIO_SHORE_STATE.worldY) continue;
 
           const x = col * cellW;
           let energy = 0;
@@ -2687,24 +2880,21 @@
             const rippleBit = remainingRipples & -remainingRipples;
             const rippleIndex = 31 - Math.clz32(rippleBit);
             const ripple = ripples[rippleIndex];
-            const age = now - ripple.start;
-            const radius = age * waveSpeed;
             const dx = x - ripple.x;
             const dy = y - ripple.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
-            const delta = Math.abs(distance - radius);
+            const delta = Math.abs(distance - ripple.radius);
 
             const falloffIndex = Math.min(
               255,
               Math.floor(delta / ringReach * 255)
             );
             const ring = ringFalloff[falloffIndex];
-            const fade = 1 - age / lifespan;
             const interference = 0.78 + 0.22 * fastSin(
-              distance * 0.09 - age * 0.018 + ripple.seed
+              distance * 0.09 - ripple.age * 0.018 + ripple.seed
             );
 
-            energy += ring * fade * interference;
+            energy += ring * ripple.fade * interference;
             remainingRipples &= remainingRipples - 1;
           }
 
@@ -2720,7 +2910,7 @@
         }
 
         ctx.globalAlpha = 1;
-        animationFrame = PORTFOLIO_FRAME_SCHEDULER.request(drawRipples);
+        animationFrame = PORTFOLIO_FRAME_SCHEDULER.request(drawRipples, frameInterval);
       }
 
       window.addEventListener("pointerdown", (event) => {
@@ -2757,6 +2947,7 @@
       asciiRight.style.color = colors[2];
 
       let indexTimer = null;
+      let indexVisible = true;
       const animateIndex = () => {
         index = (index + 1) % frames.length;
         asciiLeft.textContent = frames[index][0];
@@ -2769,10 +2960,23 @@
       const syncIndexAnimation = () => {
         window.clearTimeout(indexTimer);
         indexTimer = null;
-        if (!document.hidden && PORTFOLIO_RUNTIME.level !== "static") animateIndex();
+        if (
+          !document.hidden &&
+          indexVisible &&
+          PORTFOLIO_RUNTIME.level !== "static"
+        ) animateIndex();
       };
 
       document.addEventListener("visibilitychange", syncIndexAnimation);
+      if ("IntersectionObserver" in window) {
+        const indexTarget = asciiLeft.closest(".toc-title");
+        if (indexTarget) {
+          new IntersectionObserver((entries) => {
+            indexVisible = entries.some((entry) => entry.isIntersecting);
+            syncIndexAnimation();
+          }).observe(indexTarget);
+        }
+      }
       syncIndexAnimation();
     })();
 
@@ -2804,19 +3008,9 @@
       };
       let canvasWidth = 0;
       let canvasHeight = 0;
+      const vertices2D = model.v.map(() => [0, 0]);
       const pitchCos = Math.cos(-0.18);
       const pitchSin = Math.sin(-0.18);
-
-      function project(p, f, cx, cy) {
-        const x = p[0];
-        const y = p[1];
-        const z = Math.max(0.01, p[2]);
-
-        return [
-          cx + (x / z) * f,
-          cy - (y / z) * f
-        ];
-      }
 
       function resizeCanvas() {
         const rect = canvas.getBoundingClientRect();
@@ -2852,24 +3046,19 @@
         const rollCos = Math.cos(roll);
         const rollSin = Math.sin(roll);
 
-        const vertices3D = model.v.map((vertex) => {
+        for (let index = 0; index < model.v.length; index += 1) {
+          const vertex = model.v[index];
           const rolledX = vertex[0] * rollCos - vertex[1] * rollSin;
           const rolledY = vertex[0] * rollSin + vertex[1] * rollCos;
           const pitchedY = rolledY * pitchCos - vertex[2] * pitchSin;
           const pitchedZ = rolledY * pitchSin + vertex[2] * pitchCos;
           const rotatedX = rolledX * yawCos + pitchedZ * yawSin;
           const rotatedZ = -rolledX * yawSin + pitchedZ * yawCos;
+          const depth = Math.max(0.01, rotatedZ * scale + zOffset);
 
-          return [
-            rotatedX * scale,
-            pitchedY * scale,
-            rotatedZ * scale + zOffset
-          ];
-        });
-
-        const vertices2D = vertices3D.map((vertex) => {
-          return project(vertex, fShip, cx, cy);
-        });
+          vertices2D[index][0] = cx + (rotatedX * scale / depth) * fShip;
+          vertices2D[index][1] = cy - (pitchedY * scale / depth) * fShip;
+        }
 
         ctx.save();
 
@@ -2908,7 +3097,7 @@
           previousShipFrame = now;
           drawShip(now * 0.001);
         }
-        shipFrame = PORTFOLIO_FRAME_SCHEDULER.request(frame);
+        shipFrame = PORTFOLIO_FRAME_SCHEDULER.request(frame, minimumFrameTime);
       }
 
       const syncShip = () => {
